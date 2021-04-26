@@ -20,7 +20,7 @@ fn main() {
 
     sigma_hat.print();
     t_score.print();
-    p_value.print();
+    println!("{:?}", p_value);
 
     // Save data to plot
     let mut df = DataFrame::new(vec![]);
