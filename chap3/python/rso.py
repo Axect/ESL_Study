@@ -43,3 +43,9 @@ print("slope: ", beta)
 beta_0 = calc_intercept(X, y, beta)
 print("intercept: ", beta_0)
 
+
+# QR
+(Q, R) = np.linalg.qr(X)
+beta = np.matmul(np.matmul(np.linalg.inv(R), Q.T), Y)
+print(beta)
+
