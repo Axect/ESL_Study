@@ -18,17 +18,16 @@ def calc_z(X):  # X is np.array (not matrix)
 
     return z
 
-def calc_beta(y, Z): # calculate beta_1
-    beta = []
-    for z in Z:
-        b = calc_gamma(z, y)
-        beta.append(b)
-    return beta[1:]
+def calc_beta(y, Z): # calculate beta_p
+    z = Z[-1]
+    b = calc_gamma(z, y)
+    return b
 
-def calc_intercept(X, y, beta): # calculate beta_0
+# calculate beta_0 (only works for simple OLS)
+def calc_intercept(X, y, beta):
     y_bar = np.mean(y)
     X_bar = np.mean(X[:,1:], axis=0)
-    return y_bar - np.dot(X_bar, beta)
+    return y_bar - X_bar[0] * beta
 
 x = np.arange(1, 5, 0.1)
 err = np.random.randn(len(x))
