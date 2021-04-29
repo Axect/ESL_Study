@@ -18,7 +18,7 @@ def calc_z(X):  # X is np.array (not matrix)
 
     return z
 
-def calc_beta(y, Z): # calculate beta_1, beta_2, ...
+def calc_beta(y, Z): # calculate beta_1
     beta = []
     for z in Z:
         b = calc_gamma(z, y)
