@@ -181,7 +181,10 @@ def calc_F_score(rss_0, p_0, rss_1, p_1, N):
     return ((rss_0 - rss_1) / (p_1 - p_0)) / (rss_1 / (N - p_1 - 1))
 
 def calc_p_value(d, z):
-    return (1 - d.cdf(z)) * 2
+    if z >= 0:
+        return (1 - d.cdf(z)) * 2
+    else:
+        return 1
 ```
 
 --
@@ -195,7 +198,7 @@ def calc_p_value(d, z):
 
 ### OOP Implementations of OLS
 
-* View [Code]()
+* View [Code](https://github.com/Axect/ESL_Study/blob/master/chap3/python/ols.py)
 
 
 ---

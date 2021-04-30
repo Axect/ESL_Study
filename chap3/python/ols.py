@@ -71,6 +71,23 @@ def main():
     print()
     print("F-Test: ", f)
 
+    with plt.xkcd():
+        # Prepare Plot
+        plt.figure(figsize=(10,6), dpi=300)
+        plt.title(r"Two OLS", fontsize=16)
+        plt.xlabel(r'x', fontsize=14)
+        plt.ylabel(r'y', fontsize=14)
+
+        # Plot with Legends
+        plt.scatter(x1, y, label='Data')
+        plt.plot(x1, np.asarray(ols_1.y_hat).ravel(), 'r', label='OLS1')
+        plt.plot(x1, np.asarray(ols_2.y_hat).ravel(), 'g', label='OLS2')
+
+        # Other options
+        plt.legend(fontsize=12)
+
+    plt.savefig("two_ols.png", dpi=300)
+
 
 # ==============================================================================
 # Estimate
@@ -98,7 +115,10 @@ def calc_F_score(rss_0, p_0, rss_1, p_1, N):
     return ((rss_0 - rss_1) / (p_1 - p_0)) / (rss_1 / (N - p_1 - 1))
 
 def calc_p_value(d, z):
-    return (1 - d.cdf(z)) * 2
+    if z >= 0:
+        return (1 - d.cdf(z)) * 2
+    else:
+        return 1
 
 # ==============================================================================
 # OOP Implementation
@@ -122,7 +142,10 @@ class OLSEstimator:
         
         t_dist = ss.t(df=self.N-self.p-1)
 
-        self.p_value = calc_p_value(t_dist, self.t_score)
+        p_fun = lambda t: calc_p_value(t_dist, t)
+        p_fun = np.vectorize(p_fun)
+
+        self.p_value = p_fun(self.t_score)
     
     def summary(self):
         print("N: ", self.N)

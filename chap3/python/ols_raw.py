@@ -22,7 +22,10 @@ def calc_F_score(rss_0, p_0, rss_1, p_1, N):
     return ((rss_0 - rss_1) / (p_1 - p_0)) / (rss_1 / (N - p_1 - 1))
 
 def calc_p_value(d, z):
-    return (1 - d.cdf(z)) * 2
+    if z >= 0:
+        return (1 - d.cdf(z)) * 2
+    else:
+        return 1
 
 # Example
 np.random.seed(42)
