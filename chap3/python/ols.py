@@ -43,7 +43,7 @@ def main():
     # Prepare Data to Plot
     x1 = np.arange(1, 5, 0.1)
     x2 = x1**2
-    y = 2 * x2 + 3 * x1 + err
+    y = 2 * x2 + 3 * x1 + 5 + err
 
     X1 = np.matrix(np.column_stack((x1, x2)))
     X1 = sm.add_constant(X1)

@@ -29,6 +29,7 @@ def calc_intercept(X, y, beta):
     X_bar = np.mean(X[:,1:], axis=0)
     return y_bar - X_bar[0] * beta
 
+# Example
 x = np.arange(1, 5, 0.1)
 err = np.random.randn(len(x))
 y = 2 * x + 5 + err
