@@ -1,10 +1,11 @@
 # QR
 using LinearAlgebra, BenchmarkTools
 
-x = collect(1:0.01:5)
-y = 2 .* x .+ 5 .+ randn(length(x))
+x = collect(1:0.001:5)
+x2 = x.^2
+y = x2 + 2 .* x .+ 5 .+ randn(length(x))
 
-X = hcat(repeat([1], length(x)), x)
+X = hcat(repeat([1], length(x)), x, x2)
 
 function qr_linreg(X::U, y::V) where { T <: Number, U <: AbstractMatrix{T}, V <: AbstractVector{T} }
     Q, R = qr(X)
