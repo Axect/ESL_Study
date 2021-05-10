@@ -36,7 +36,7 @@ def main():
     with plt.xkcd():
         # Prepare Plot
         plt.figure(figsize=(10,6), dpi=300)
-        plt.title(r"Simple OLS", fontsize=16)
+        plt.title(r"Simple OLS & Ridge", fontsize=16)
         plt.xlabel(r'x', fontsize=14)
         plt.ylabel(r'y', fontsize=14)
 
@@ -53,7 +53,8 @@ def main():
     # Prepare Data to Plot
     x1 = np.arange(1, 5, 0.1)
     x2 = x1**2
-    y = 2 * x2 + 3 * x1 + 5 + err
+    err = np.random.rand(len(x1))
+    y = 2 * x2 + 3 * x1 + 5 + 5 * err
 
     X1 = np.matrix(np.column_stack((x1, x2)))
     X1 = sm.add_constant(X1)
@@ -63,11 +64,14 @@ def main():
 
     ols_1 = OLSEstimator(X1, Y)
     ols_2 = OLSEstimator(X2, Y)
+    ridge_1 = OLSEstimator(X1, Y, 2)
 
     ols_1.estimate()
     ols_2.estimate()
+    ridge_1.estimate()
     ols_1.test()
     ols_2.test()
+    ridge_1.test()
 
     print()
     print("OLS1: ")
@@ -77,6 +81,10 @@ def main():
     print("OLS2: ")
     ols_2.summary()
 
+    print()
+    print("Ridge1: ")
+    ridge_1.summary()
+
     f = ols_1.f_test(ols_2)
     print()
     print("F-Test: ", f)
@@ -84,19 +92,20 @@ def main():
     with plt.xkcd():
         # Prepare Plot
         plt.figure(figsize=(10,6), dpi=300)
-        plt.title(r"Two OLS", fontsize=16)
+        plt.title(r"Two OLS and One Ridge", fontsize=16)
         plt.xlabel(r'x', fontsize=14)
         plt.ylabel(r'y', fontsize=14)
 
         # Plot with Legends
         plt.scatter(x1, y, label='Data')
-        plt.plot(x1, np.asarray(ols_1.y_hat).ravel(), 'r', label='OLS1')
-        plt.plot(x1, np.asarray(ols_2.y_hat).ravel(), 'g', label='OLS2')
+        plt.plot(x1, np.asarray(ols_1.y_hat).ravel(), 'r', alpha=0.7, label='OLS1')
+        plt.plot(x1, np.asarray(ols_2.y_hat).ravel(), 'g', alpha=0.7, label='OLS2')
+        plt.plot(x1, np.asarray(ridge_1.y_hat).ravel(), 'b', alpha=0.7, label='Ridge1')
 
         # Other options
         plt.legend(fontsize=12)
 
-    plt.savefig("two_ols.png", dpi=300)
+    plt.savefig("two_ols_one_ridge.png", dpi=300)
 
 # ==============================================================================
 # Estimate
