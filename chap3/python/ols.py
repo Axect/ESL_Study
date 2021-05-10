@@ -22,7 +22,16 @@ def main():
     ols.estimate()
     ols.test()
 
+    ridge = OLSEstimator(X, Y, 2)
+    ridge.estimate()
+    ridge.test()
+
+    print("OLS: ")
     ols.summary()
+
+    print()
+    print("Ridge: ")
+    ridge.summary()
 
     with plt.xkcd():
         # Prepare Plot
@@ -33,12 +42,13 @@ def main():
 
         # Plot with Legends
         plt.scatter(x, y, label='Data')
-        plt.plot(x, np.asarray(ols.y_hat).ravel(), 'r', label='fit')
+        plt.plot(x, np.asarray(ols.y_hat).ravel(), 'r', label='OLS')
+        plt.plot(x, np.asarray(ridge.y_hat).ravel(), 'g', label='Ridge')
 
         # Other options
         plt.legend(fontsize=12)
 
-    plt.savefig("simple_ols.png", dpi=300)
+    plt.savefig("ols_ridge.png", dpi=300)
 
     # Prepare Data to Plot
     x1 = np.arange(1, 5, 0.1)
@@ -91,8 +101,15 @@ def main():
 # ==============================================================================
 # Estimate
 # ==============================================================================
-def find_beta_hat(X, y): # X should be np.matrix
-    return np.linalg.pinv(X) * y
+def find_beta_hat(X, y, lam=0): # X should be np.matrix
+    if lam == 0:
+        return np.linalg.pinv(X) * y
+    else:
+        u, s, vt = np.linalg.svd(X, full_matrices=False)
+        u = np.matrix(u)
+        vt = np.matrix(vt)
+        s_star = np.matrix(np.diag(s / (s ** 2 + lam)))
+        return vt.T * s_star * u.T * y
 
 def find_y_hat(X, beta, y):
     return X * beta
@@ -123,12 +140,13 @@ def calc_p_value(d, z):
 # OOP Implementation
 # ==============================================================================
 class OLSEstimator:
-    def __init__(self, X, Y):
+    def __init__(self, X, Y, lam=0):
         self.X = X
         self.Y = Y
+        self.lam = lam
     
     def estimate(self):
-        self.beta_hat = find_beta_hat(self.X, self.Y)
+        self.beta_hat = find_beta_hat(self.X, self.Y, self.lam)
         self.y_hat = find_y_hat(self.X, self.beta_hat, self.Y)
     
     def test(self):
