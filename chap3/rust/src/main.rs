@@ -59,6 +59,10 @@ fn find_y_hat(x: &Matrix, y: &Vec<f64>) -> (Vec<f64>, Vec<f64>) {
 // =============================================================================
 // Test Procedure
 // =============================================================================
+fn calc_rss(y: &Vec<f64>, y_hat: &Vec<f64>) -> f64 {
+    y.zip_with(|x, xh| (x - xh).powi(2), y_hat).sum()
+}
+
 fn find_sigma_hat(y: &Vec<f64>, y_hat: &Vec<f64>, p: usize) -> f64 {
     let mut s = 0f64;
     for (a, b) in y.iter().zip(y_hat.iter()) {
@@ -215,16 +219,31 @@ impl LinReg {
         let N: usize = self.N;
         let p: usize = self.p;
 
-        let sigma_hat = find_sigma_hat(self.output(), self.y_hat(), p);
-        let t_score = calc_t_score(self.beta(), self.input(), sigma_hat);
+        match self.method {
+            Method::OLS => {
+                let nu = (N - p - 1) as f64;
+                let sigma_hat = find_sigma_hat(self.output(), self.y_hat(), p);
+                let t_score = calc_t_score(self.beta(), self.input(), sigma_hat);
+                let t_dist = OPDist::StudentT(nu);
+                let p_value = t_score.fmap(|t| calc_p_value(&t_dist, t));
+                self.sigma_hat = Some(sigma_hat);
+                self.t_score = Some(t_score);
+                self.p_value = Some(p_value);
+            }
+            Method::Ridge(lam) => {
+                let x_svd = self.input().svd();
+                let u = x_svd.u();
+                let s = &x_svd.s;
+                let vt = x_svd.vt();
 
-        let t_dist = OPDist::StudentT((N-p-1) as f64);
+                todo!()
 
-        let p_value = t_score.fmap(|t| calc_p_value(&t_dist, t));
+            }
+            Method::Lasso(lam) => {
+                todo!()
+            }
+        }
 
-        self.sigma_hat = Some(sigma_hat);
-        self.t_score = Some(t_score);
-        self.p_value = Some(p_value);
     }
 
     pub fn summary(&self) {
