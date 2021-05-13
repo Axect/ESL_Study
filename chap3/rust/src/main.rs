@@ -7,20 +7,27 @@ fn main() {
     let x = seq(1, 5, 0.1);
     let err = rnorm!(x.len());
     let y = x.zip_with(|x, e| 2f64 * x + 3f64 + e, &err);
+    let y_bar = y.mean();
 
     // OLS Estimator
-    let mut ols = OLSEstimator::new(&x, &y);
+    let mut ols = LinReg::new(&x.clone().into(), &y, Method::OLS);
     ols.estimate();
     ols.stat_test();
 
+    let mut ridge = LinReg::new(&x.clone().into(), &y, Method::Ridge(1f64));
+    ridge.estimate();
+    ridge.stat_test();
+
+    ols.summary();
+    println!("");
+
+    ridge.summary();
+
+    let beta_hat = ols.beta();
     let y_hat= ols.y_hat();
     let sigma_hat = ols.sigma_hat();
     let t_score = ols.t_score();
     let p_value = ols.p_value();
-
-    sigma_hat.print();
-    t_score.print();
-    println!("{:?}", p_value);
 
     // Save data to plot
     let mut df = DataFrame::new(vec![]);
@@ -72,29 +79,50 @@ fn calc_p_value<D: RNG>(dist: &D, z: f64) -> f64 {
 // =============================================================================
 // OOP implementation
 // =============================================================================
+#[allow(non_snake_case)]
 #[derive(Debug, Clone)]
-pub struct OLSEstimator {
+pub struct LinReg {
     input: Matrix,
     output: Vec<f64>,
+    N: usize,
+    p: usize,
     beta: Option<Vec<f64>>,
     y_hat: Option<Vec<f64>>,
     sigma_hat: Option<f64>,
     t_score: Option<Vec<f64>>,
     p_value: Option<Vec<f64>>,
+    method: Method
 }
 
-impl OLSEstimator {
-    pub fn new(x: &Vec<f64>, y: &Vec<f64>) -> Self {
-        let x_mat = add_bias(x.into());
+#[derive(Debug, Clone, Copy)]
+pub enum Method {
+    OLS,
+    Ridge(f64),
+    Lasso(f64),
+}
+
+impl LinReg {
+    pub fn new(x: &Matrix, y: &Vec<f64>, method: Method) -> Self {
+        let (x_mat, y_vec) = match method {
+            Method::OLS => {
+                (add_bias(x.clone()), y.clone())
+            }
+            _ => {
+                (x.standardize(), y.centered())
+            }
+        };
         
         Self {
             input: x_mat,
-            output: y.clone(),
+            output: y_vec,
+            N: y.len(),
+            p: x.col,
             beta: None,
             y_hat: None,
             sigma_hat: None,
             t_score: None,
             p_value: None,
+            method,
         }
     } 
 
@@ -142,15 +170,50 @@ impl OLSEstimator {
     }
 
     pub fn estimate(&mut self) {
-        let (y_hat, beta) = find_y_hat(self.input(), self.output());
-        self.beta = Some(beta);
-        self.y_hat = Some(y_hat);
+        match self.method {
+            Method::OLS => {
+                let (y_hat, beta) = find_y_hat(self.input(), self.output());
+                self.beta = Some(beta);
+                self.y_hat = Some(y_hat);
+            }
+            Method::Ridge(lam) => {
+                // Full SVD
+                let x_svd = self.input.svd();
+                let s_star: Vec<f64> = x_svd.s.iter()
+                    .filter(|&t| *t != 0f64)
+                    .map(|sigma| sigma / (sigma.powi(2) + lam))
+                    .collect();
+                let u = x_svd.u();
+                let vt = x_svd.vt();
+                let u = u.take_col(s_star.len());
+                let vt = vt.take_row(s_star.len());
+                
+                let mut sigma_star = zeros(s_star.len(), s_star.len());
+                for i in 0 .. s_star.len() {
+                    sigma_star[(i, i)] = s_star[i];
+                }
+
+                let beta_ridge = vt.t() * sigma_star * (&u.t() * self.output());
+                let beta_0 = self.output().mean();
+
+                let beta = cat(beta_0, &beta_ridge);
+
+                println!("beta: {:?}", beta);
+                let y_hat = &(add_bias(self.input().clone())) * &beta;
+
+                self.beta = Some(beta);
+                self.y_hat = Some(y_hat);
+            }
+            Method::Lasso(_lam) => {
+                todo!()
+            }
+        }
     }
 
     #[allow(non_snake_case)]
     pub fn stat_test(&mut self) {
-        let N: usize = self.output().len();
-        let p: usize = self.input().col-1;
+        let N: usize = self.N;
+        let p: usize = self.p;
 
         let sigma_hat = find_sigma_hat(self.output(), self.y_hat(), p);
         let t_score = calc_t_score(self.beta(), self.input(), sigma_hat);
@@ -162,5 +225,61 @@ impl OLSEstimator {
         self.sigma_hat = Some(sigma_hat);
         self.t_score = Some(t_score);
         self.p_value = Some(p_value);
+    }
+
+    pub fn summary(&self) {
+        println!("N: {}", self.N);
+        println!("p: {}", self.p);
+        print!("beta: ");
+        self.beta().print();
+        print!("sigma: ");
+        self.sigma_hat().print();
+        print!("t-score: ");
+        self.t_score().print();
+        print!("p-value: ");
+        self.p_value().print();
+    }
+}
+
+pub trait Scaled {
+    fn standardize(&self) -> Self;
+    fn centered(&self) -> Self;
+}
+
+impl Scaled for Vec<f64> {
+    fn standardize(&self) -> Self {
+        let x_bar = self.mean();
+        let sd = self.sd();
+        self.fmap(|t| (t - x_bar) / sd)
+    }
+
+    fn centered(&self) -> Self {
+        let y_bar = self.mean();
+        self.sub_s(y_bar)
+    }
+}
+
+impl Scaled for Matrix {
+    fn standardize(&self) -> Self {
+        let x_bar = self.mean();
+        let sd = self.sd();
+
+        let mut m = zeros(self.row, self.col);
+        for i in 0 .. self.col {
+            let v = self.col(i).fmap(|x| (x - x_bar[i]) / sd[i]);
+            m.subs_col(i, &v);
+        }
+        m
+    }
+
+    fn centered(&self) -> Self {
+        let x_bar = self.mean();
+
+        let mut m = zeros(self.row, self.col);
+        for i in 0 .. self.col {
+            let v = self.col(i).sub_s(x_bar[i]);
+            m.subs_col(i, &v);
+        }
+        m
     }
 }
