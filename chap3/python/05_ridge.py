@@ -137,7 +137,7 @@ def calc_p_value(d, z):
     if z >= 0:
         return (1 - d.cdf(z)) * 2
     else:
-        return 1
+        return d.cdf(z) * 2
 
 # ==============================================================================
 # Scaling
