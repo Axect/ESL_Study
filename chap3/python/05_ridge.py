@@ -15,14 +15,14 @@ def main():
     y = 2 * x + 3 + err
 
     X = np.matrix(x).T
-    X = sm.add_constant(X)
+    Xb = sm.add_constant(X)
     Y = np.matrix(y).T
 
-    ols = OLSEstimator(X, Y)
+    ols = OLSEstimator(Xb, Y)
     ols.estimate()
     ols.test()
 
-    ridge = OLSEstimator(X, Y, 2)
+    ridge = RidgeReg(X, Y, 10)
     ridge.estimate()
     ridge.test()
 
@@ -30,7 +30,8 @@ def main():
     ols.summary()
 
     print()
-    print("Ridge: ")
+
+    print("RIDGE: ")
     ridge.summary()
 
     with plt.xkcd():
@@ -43,69 +44,61 @@ def main():
         # Plot with Legends
         plt.scatter(x, y, label='Data')
         plt.plot(x, np.asarray(ols.y_hat).ravel(), 'r', label='OLS')
-        plt.plot(x, np.asarray(ridge.y_hat).ravel(), 'g', label='Ridge')
+        plt.plot(x, np.asarray(ridge.true_y_hat).ravel(), 'g', label='Ridge')
 
         # Other options
         plt.legend(fontsize=12)
 
     plt.savefig("ols_ridge.png", dpi=300)
 
-    # Prepare Data to Plot
-    x1 = np.arange(1, 5, 0.1)
-    x2 = x1**2
-    err = np.random.rand(len(x1))
-    y = 2 * x2 + 3 * x1 + 5 + 5 * err
+    print()
 
-    X1 = np.matrix(np.column_stack((x1, x2)))
-    X1 = sm.add_constant(X1)
-    X2 = np.matrix(x1).T
-    X2 = sm.add_constant(X2)
+    # ==============================================================================
+    # Gaussian Basis
+    # ==============================================================================
+    x = np.arange(0, np.math.pi, 0.05)
+    err = np.random.randn(len(x))
+    y = np.sin(x) + (x / 3) ** 2 + 0.1 * err
+
+    #X = np.matrix(np.column_stack((phi(0, 5, x), phi(1, 5, x), phi(2, 5, x), phi(3, 5, x))))
+    X = np.matrix(np.column_stack([phi(j/10, 5, x) for j in range(0, 30)]))
+    Xb = sm.add_constant(X)
     Y = np.matrix(y).T
 
-    ols_1 = OLSEstimator(X1, Y)
-    ols_2 = OLSEstimator(X2, Y)
-    ridge_1 = OLSEstimator(X1, Y, 2)
+    ols = OLSEstimator(Xb, Y)
+    ols.estimate()
+    ols.test()
 
-    ols_1.estimate()
-    ols_2.estimate()
-    ridge_1.estimate()
-    ols_1.test()
-    ols_2.test()
-    ridge_1.test()
+    ridge = RidgeReg(X, Y, 1)
+    ridge.estimate()
+    ridge.test()
 
-    print()
-    print("OLS1: ")
-    ols_1.summary()
+    print("OLS: ")
+    ols.summary()
 
     print()
-    print("OLS2: ")
-    ols_2.summary()
 
-    print()
-    print("Ridge1: ")
-    ridge_1.summary()
-
-    f = ols_1.f_test(ols_2)
-    print()
-    print("F-Test: ", f)
+    print("RIDGE: ")
+    ridge.summary()
 
     with plt.xkcd():
         # Prepare Plot
         plt.figure(figsize=(10,6), dpi=300)
-        plt.title(r"Two OLS and One Ridge", fontsize=16)
+        plt.title(r"Gaussian OLS & Ridge", fontsize=16)
         plt.xlabel(r'x', fontsize=14)
         plt.ylabel(r'y', fontsize=14)
 
         # Plot with Legends
-        plt.scatter(x1, y, label='Data')
-        plt.plot(x1, np.asarray(ols_1.y_hat).ravel(), 'r', alpha=0.7, label='OLS1')
-        plt.plot(x1, np.asarray(ols_2.y_hat).ravel(), 'g', alpha=0.7, label='OLS2')
-        plt.plot(x1, np.asarray(ridge_1.y_hat).ravel(), 'b', alpha=0.7, label='Ridge1')
+        plt.scatter(x, y, label='Data')
+        plt.plot(x, np.asarray(ols.y_hat).ravel(), 'r', label='OLS')
+        plt.plot(x, np.asarray(ridge.true_y_hat).ravel(), 'g', label='Ridge')
 
         # Other options
         plt.legend(fontsize=12)
 
-    plt.savefig("two_ols_one_ridge.png", dpi=300)
+    plt.savefig("gaussian_ols_ridge.png", dpi=300)
+
+
 
 # ==============================================================================
 # Estimate
@@ -114,13 +107,14 @@ def find_beta_hat(X, y, lam=0): # X should be np.matrix
     if lam == 0:
         return np.linalg.pinv(X) * y
     else:
-        u, s, vt = np.linalg.svd(X, full_matrices=False)
+        svd = np.linalg.svd(X, full_matrices=False)
+        u, s, vt = svd
         u = np.matrix(u)
         vt = np.matrix(vt)
         s_star = np.matrix(np.diag(s / (s ** 2 + lam)))
-        return vt.T * s_star * u.T * y
+        return (vt.T * s_star * u.T * y, svd)
 
-def find_y_hat(X, beta, y):
+def find_y_hat(X, beta):
     return X * beta
 
 # ==============================================================================
@@ -146,27 +140,42 @@ def calc_p_value(d, z):
         return 1
 
 # ==============================================================================
+# Scaling
+# ==============================================================================
+def standardize(x):
+    return (x - x.mean(axis=0)) / x.std(axis=0)
+
+def center(y):
+    return y - y.mean(axis=0)
+
+# ==============================================================================
+# Basis Function
+# ==============================================================================
+def phi(j, s, x):
+    return np.exp(-(x - j) ** 2 / s)
+
+# ==============================================================================
 # OOP Implementation
 # ==============================================================================
 class OLSEstimator:
-    def __init__(self, X, Y, lam=0):
+    def __init__(self, X, Y):
         self.X = X
         self.Y = Y
-        self.lam = lam
     
     def estimate(self):
-        self.beta_hat = find_beta_hat(self.X, self.Y, self.lam)
-        self.y_hat = find_y_hat(self.X, self.beta_hat, self.Y)
+        self.beta_hat = find_beta_hat(self.X, self.Y)
+        self.y_hat = find_y_hat(self.X, self.beta_hat)
     
     def test(self):
         self.N = self.Y.shape[0]
         self.p = self.X.shape[1]-1
+        self.nu = self.N - self.p - 1
 
         self.sigma_hat = find_sigma_hat(np.asarray(self.Y).ravel(), np.asarray(self.y_hat).ravel(), self.p)
         self.t_score = calc_t_score(np.asarray(self.beta_hat).ravel(), self.X, self.sigma_hat)
         self.rss = calc_rss(np.asarray(self.Y).ravel(), np.asarray(self.y_hat).ravel())
         
-        t_dist = ss.t(df=self.N-self.p-1)
+        t_dist = ss.t(df=self.nu)
 
         p_fun = lambda t: calc_p_value(t_dist, t)
         p_fun = np.vectorize(p_fun)
@@ -197,6 +206,39 @@ class OLSEstimator:
         p_value = calc_p_value(f_dist, f_score)
 
         return (f_score, p_value)
+
+class RidgeReg(OLSEstimator):
+    def __init__(self, X, Y, lam):
+        self.X = standardize(X)
+        self.Y = center(Y)
+        self.beta_0 = np.mean(Y)
+        self.lam = lam
+
+    def estimate(self):
+        self.beta_hat, self.svd = find_beta_hat(self.X, self.Y, self.lam)
+        self.y_hat = find_y_hat(self.X, self.beta_hat)
+        self.true_y_hat = self.y_hat + self.beta_0
+
+    def test(self):
+        self.N = self.Y.shape[0]
+        self.p = self.X.shape[1]
+        (u, s, vt) = self.svd
+        s_star = np.matrix(np.diag(s / (s ** 2 + self.lam)))
+        
+        self.nu = self.N - self.p + np.sum((self.lam / (s ** 2 + self.lam)) ** 2)
+        self.rss = calc_rss(np.asarray(self.Y).ravel(), np.asarray(self.y_hat).ravel())
+        
+        self.sigma_hat = self.rss / self.nu
+        v = np.asarray((vt.T * s_star ** 2 * vt).diagonal()).ravel()
+        self.t_score = np.asarray(self.beta_hat).ravel() / np.sqrt(self.sigma_hat * v)
+        
+        t_dist = ss.t(df=self.nu)
+
+        p_fun = lambda t: calc_p_value(t_dist, t)
+        p_fun = np.vectorize(p_fun)
+
+        self.p_value = p_fun(self.t_score)
+
 
 if __name__ == "__main__":
     main()
