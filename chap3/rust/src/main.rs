@@ -95,7 +95,8 @@ pub struct LinReg {
     sigma_hat: Option<f64>,
     t_score: Option<Vec<f64>>,
     p_value: Option<Vec<f64>>,
-    method: Method
+    method: Method,
+    _cached_svd: Option<SVD>,
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -127,6 +128,7 @@ impl LinReg {
             t_score: None,
             p_value: None,
             method,
+            _cached_svd: None,
         }
     } 
 
@@ -172,6 +174,13 @@ impl LinReg {
             Some(p_value) => p_value
         }
     }
+    
+    fn cached_svd(&self) -> &SVD {
+        match &self._cached_svd {
+            None => panic!("SVD is not yet calculated"),
+            Some(svd) => svd
+        }
+    }
 
     pub fn estimate(&mut self) {
         match self.method {
@@ -181,10 +190,9 @@ impl LinReg {
                 self.y_hat = Some(y_hat);
             }
             Method::Ridge(lam) => {
-                // Full SVD
-                let x_svd = self.input.svd();
+                // Truncated SVD
+                let x_svd = self.input.svd().truncated();
                 let s_star: Vec<f64> = x_svd.s.iter()
-                    .filter(|&t| *t != 0f64)
                     .map(|sigma| sigma / (sigma.powi(2) + lam))
                     .collect();
                 let u = x_svd.u();
@@ -207,6 +215,7 @@ impl LinReg {
 
                 self.beta = Some(beta);
                 self.y_hat = Some(y_hat);
+                self._cached_svd = Some(x_svd);
             }
             Method::Lasso(_lam) => {
                 todo!()
@@ -231,13 +240,31 @@ impl LinReg {
                 self.p_value = Some(p_value);
             }
             Method::Ridge(lam) => {
-                let x_svd = self.input().svd();
+                let x_svd = self.cached_svd();
                 let u = x_svd.u();
                 let s = &x_svd.s;
+                let s_mat = x_svd.s_mat();
                 let vt = x_svd.vt();
+                let v = vt.t();
+                let s_star = s.fmap(|t| t / (t.powi(2) + lam));
+                let mut sigma_star = zeros(s.len(), s.len());
+                for i in 0 .. s.len() {
+                    sigma_star[(i, i)] = s_star[i].powi(2);
+                }
+                let v_mat = &(&v * &sigma_star) * vt;
+                let v_vec = v_mat.diag();
 
-                todo!()
+                let nu = (N - p) as f64 + s.fmap(|t| lam / (t.powi(2) + lam)).sum();
+                let rss = calc_rss(self.output(), self.y_hat());
+                let sigma_hat = rss / nu;
+                let beta = self.beta().skip(1);
+                let t_score = beta.zip_with(|b_j, v_j| b_j / (sigma_hat * v_j).sqrt(), &v_vec);
+                let t_dist = OPDist::StudentT(nu);
+                let p_value = t_score.fmap(|t| calc_p_value(&t_dist, t));
 
+                self.sigma_hat = Some(sigma_hat);
+                self.t_score = Some(t_score);
+                self.p_value = Some(p_value);
             }
             Method::Lasso(lam) => {
                 todo!()
