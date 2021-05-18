@@ -56,12 +56,12 @@ def main():
     # ==============================================================================
     # Gaussian Basis
     # ==============================================================================
-    x = np.arange(0, np.math.pi, 0.05)
+    x = np.arange(0, np.math.pi, 0.01)
     err = np.random.randn(len(x))
     y = np.sin(x) + (x / 3) ** 2 + 0.1 * err
 
     #X = np.matrix(np.column_stack((phi(0, 5, x), phi(1, 5, x), phi(2, 5, x), phi(3, 5, x))))
-    X = np.matrix(np.column_stack([phi(j/10, 5, x) for j in range(0, 30)]))
+    X = np.matrix(np.column_stack([phi(j/100, 5, x) for j in range(0, 300)]))
     Xb = sm.add_constant(X)
     Y = np.matrix(y).T
 
@@ -69,34 +69,38 @@ def main():
     ols.estimate()
     ols.test()
 
-    ridge = RidgeReg(X, Y, 1)
-    ridge.estimate()
-    ridge.test()
+    ridges = [RidgeReg(X, Y, 10**(lam/2)) for lam in range(0, 10)]
+    for ridge in ridges:
+        ridge.estimate()
+    #ridge = RidgeReg(X, Y, 1)
+    #ridge.estimate()
+    #ridge.test()
 
-    print("OLS: ")
-    ols.summary()
+    #print("OLS: ")
+    #ols.summary()
 
-    print()
+    #print()
 
-    print("RIDGE: ")
-    ridge.summary()
+    #print("RIDGE: ")
+    #ridge.summary()
 
-    with plt.xkcd():
-        # Prepare Plot
-        plt.figure(figsize=(10,6), dpi=300)
-        plt.title(r"Gaussian OLS & Ridge", fontsize=16)
-        plt.xlabel(r'x', fontsize=14)
-        plt.ylabel(r'y', fontsize=14)
+    #with plt.xkcd():
+    # Prepare Plot
+    plt.figure(figsize=(10,6), dpi=300)
+    plt.title(r"Gaussian OLS & Ridge", fontsize=16)
+    plt.xlabel(r'x', fontsize=14)
+    plt.ylabel(r'y', fontsize=14)
 
-        # Plot with Legends
-        plt.scatter(x, y, label='Data')
-        plt.plot(x, np.asarray(ols.y_hat).ravel(), 'r', label='OLS')
-        plt.plot(x, np.asarray(ridge.true_y_hat).ravel(), 'g', label='Ridge')
+    # Plot with Legends
+    plt.scatter(x, y, color="blue", alpha=0.1, label='Data')
+    plt.plot(x, np.asarray(ols.y_hat).ravel(), 'r', label='OLS')
+    for ridge in ridges:
+        plt.plot(x, np.asarray(ridge.true_y_hat).ravel(), label='Ridge')
 
-        # Other options
-        plt.legend(fontsize=12)
+    # Other options
+    plt.legend(fontsize=12)
 
-    plt.savefig("gaussian_ols_ridge.png", dpi=300)
+    plt.savefig("gaussian_ols_ridges.png", dpi=300)
 
 
 
