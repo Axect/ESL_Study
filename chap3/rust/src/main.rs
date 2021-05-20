@@ -38,7 +38,7 @@ fn main() {
 
     let beta_init = find_beta_hat(&X_s, &y);
 
-    let beta = lasso(&beta_init, &X_s, &y, 0.05f64, 500);
+    let beta = lasso(&beta_init, &X_s, &y, 1e-10, 500);
     beta.print();
     let y_new = (X_s * beta);
 
