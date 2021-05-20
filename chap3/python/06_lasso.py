@@ -22,11 +22,11 @@ def main():
     ols.estimate()
     ols.test()
 
-    ridge = RidgeReg(X, Y, 1)
+    ridge = RidgeReg(X, Y, 10)
     ridge.estimate()
     ridge.test()
 
-    lasso = LassoReg(X, Y, 0.01)
+    lasso = LassoReg(X, center(Y), 1e-15)
     lasso.estimate()
 
     print("OLS: ")
@@ -49,7 +49,7 @@ def main():
         plt.scatter(x, y, label='Data')
         plt.plot(x, np.asarray(ols.y_hat).ravel(), 'r', label='OLS')
         plt.plot(x, np.asarray(ridge.true_y_hat).ravel(), 'g', label='Ridge')
-        plt.plot(x, np.asarray(lasso.y_hat).ravel(), color='purple', alpha=0.5, label='Lasso')
+        plt.plot(x, np.asarray(lasso.y_hat + Y.mean(axis=0)).ravel(), color='purple', alpha=0.5, label='Lasso')
 
         # Other options
         plt.legend(fontsize=12)
