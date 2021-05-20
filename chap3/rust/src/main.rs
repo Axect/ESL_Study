@@ -4,30 +4,54 @@ use peroxide::fuga::*;
 
 fn main() {
     // Generate random data
-    let x = seq(0, std::f64::consts::PI, 0.11);
+    let x = seq(0, std::f64::consts::PI, 0.01);
     let err = rnorm!(x.len());
     let y = x.zip_with(|t, e| t.sin() + (t / 3f64).powi(2) + 0.1 * e, &err);
     let y_bar = y.mean();
 
-    let mut X = zeros_shape(x.len(), 30, Col);
+    let mut X = zeros_shape(x.len(), 310, Col);
     for j in 0 .. X.col {
-        X.subs_col(j, &x.fmap(|t| phi(j as f64/ 10f64, 5f64, t)));
+        X.subs_col(j, &x.fmap(|t| phi(j as f64/ 100f64, 0.1f64, t)));
     }
-    let X_s = X.standardize();
+    
+    //let X = hstack!(x.clone(), x.fmap(|t| t.powi(2)), x.fmap(|t| t.powi(3)), x.fmap(|t| t.powi(4)));
+
+    // OLS Estimator
+    let mut ols = LinReg::new(&X, &y, Method::OLS);
+    ols.estimate();
+    ols.stat_test();
+
+    // Ridge
+    let mut ridge = LinReg::new(&X, &y, Method::Ridge(1f64));
+    ridge.estimate();
+    ridge.stat_test();
+
+    ols.summary();
+    println!("");
+
+    ridge.summary();
+
+    // Lasso
+    let mut X_s = X;
+    X_s.col_mut_map(|c| c.div_s(c.norm(Norm::L2)));
     let y_c = y.centered();
 
-    let beta = lar(&y_c, &X_s, 1e-3);
-    let y_new = (X_s * beta).add_s(y_bar);
-    y.print();
+    let beta_init = find_beta_hat(&X_s, &y);
+
+    let beta = lasso(&beta_init, &X_s, &y, 0.05f64, 500);
+    beta.print();
+    let y_new = (X_s * beta);
 
     let mut df = DataFrame::new(vec![]);
     df.push("x", Series::new(x));
     df.push("y", Series::new(y));
-    df.push("y_hat", Series::new(y_new));
+    df.push("y_ols", Series::new(ols.y_hat().clone()));
+    df.push("y_ridge", Series::new(ridge.y_hat().add_s(y_bar)));
+    df.push("y_lasso", Series::new(y_new));
 
     df.print();
 
-    df.write_nc("data/lar.nc").expect("Can't write nc file");
+    df.write_nc("data/lasso.nc").expect("Can't write nc file");
 
 
     //// OLS Estimator
@@ -74,7 +98,9 @@ fn find_beta_hat(x: &Matrix, y: &Vec<f64>) -> Vec<f64> {
 
 fn find_y_hat(x: &Matrix, y: &Vec<f64>) -> (Vec<f64>, Vec<f64>) {
     let beta = find_beta_hat(x, y);
-    (x * &beta, beta)
+    let svd = x.svd().truncated();
+    let u = svd.u();
+    ((u * &u.t()).apply(&y), beta)
 }
 
 // =============================================================================
@@ -110,89 +136,119 @@ pub fn phi(j: f64, s: f64, x: f64) -> f64 {
 }
 
 // =============================================================================
-// LAR
+// Coordinate Descent
 // =============================================================================
-/// # Condition
-/// * X should be standardized
-/// * y should be centered
-#[allow(non_snake_case)]
-fn lar(y: &Vec<f64>, X: &Matrix, alpha_origin: f64) -> Vec<f64> {
-    // Initial Step (k=1)
-    let mut alpha = alpha_origin;
-    let mut y_hat = vec![0f64; y.len()];
-    let mut r = y.clone();
-    let mut beta = vec![0f64; X.col];
-    let mut A = vec![];
-    let mut j = find_max_corr(X, &r, &A).unwrap();
-    j.print();
-    A.push(j);
-    let mut j_prev = A.iter().last().unwrap().clone();
-    let mut X_A: Matrix = X.col(j).into();
-    let mut G_A = X_A.pseudo_inv();
-    let mut delta = &G_A * &r;
-    let mut beta_temp = delta.mul_s(alpha);
-    A.iter().zip(beta_temp.iter()).for_each(|(i, b)| beta[*i] = *b);
-    A.print();
-    beta_temp.print();
-    
-    'outer: for k in 0 .. X.col {
-        r = r.sub_v(&X_A.apply(&beta));
-        match find_max_corr(X, &r, &A) {
-            Some(i) => j = i,
-            None => break,
+fn lasso(beta_init: &Vec<f64>, X: &Matrix, y: &Vec<f64>, lam: f64, num_iters: usize) -> Vec<f64> {
+    let N = X.row;
+    let p = X.col;
+    let mut beta = beta_init.clone();
+
+    for i in 0 .. num_iters {
+        for j in 0 .. p {
+            let y_hat = X * &beta;
+            let x_j = X.col(j);
+            let rho = x_j.dot(&(y.sub_v(&y_hat).add_v(&x_j.mul_s(beta[j]))));
+            beta[j] = soft_threshold(rho, lam);
         }
-        //let mut stack = 0usize;
-        while j == j_prev {
-            let delta_prev = delta.clone();
-            delta = &G_A * &r;
-            if delta[0] * delta_prev[0] < 0f64 {
-                alpha *= 0.01;
-                delta = delta_prev;
-            }
-            beta_temp = beta_temp.add_v(&delta.mul_s(alpha));
-            r = r.sub_v(&X_A.apply(&beta_temp));
-            match find_max_corr(X, &r, &A) {
-                Some(i) => j = i,
-                None => break 'outer,
-            }
-            delta.print();
-            //stack += 1;
-            //stack.print();
-        }
-        alpha = alpha_origin;
-        j_prev = j;
-        A.print();
-        A.iter().zip(beta_temp.iter()).for_each(|(i, b)| beta[*i] = *b);
-        if k == X.col-1 {
-            break
-        }
-        j.print();
-        A.push(j);
-        X_A.add_col_mut(&X.col(j));
-        G_A = X_A.pseudo_inv();
-        delta = G_A.apply(&r);
-        beta_temp.push(0f64);
-        beta_temp = beta_temp.add_v(&delta.mul_s(alpha));
     }
-    A.iter().zip(beta_temp.iter()).for_each(|(i, b)| beta[*i] = *b);
     beta
 }
 
-fn find_max_corr(X: &Matrix, target: &Vec<f64>, ignore: &Vec<usize>) -> Option<usize> {
-    let ref_vec = X.col_reduce(|c| cor(&c, target));
-    let mut removed = vec![-2f64; ref_vec.len()];
-    let mut stack = 0usize;
-    for (i, v) in ref_vec.into_iter().enumerate() {
-        if !ignore.contains(&i) {
-            removed[i] = v;
-            stack += 1;
-        }
-    }
-    match stack {
-        0 => None,
-        _ => Some(removed.arg_max())
+
+fn soft_threshold(beta: f64, lam: f64) -> f64 {
+    if beta < -lam {
+        beta + lam
+    } else if beta > lam {
+        beta - lam
+    } else {
+        0f64
     }
 }
+
+// =============================================================================
+// LAR
+// =============================================================================
+///// # Condition
+///// * X should be standardized
+///// * y should be centered
+//#[allow(non_snake_case)]
+//fn lar(y: &Vec<f64>, X: &Matrix, alpha_origin: f64) -> Vec<f64> {
+//    // Initial Step (k=1)
+//    let mut alpha = alpha_origin;
+//    let mut y_hat = vec![0f64; y.len()];
+//    let mut r = y.clone();
+//    let mut beta = vec![0f64; X.col];
+//    let mut A = vec![];
+//    let mut j = find_max_corr(X, &r, &A).unwrap();
+//    j.print();
+//    A.push(j);
+//    let mut j_prev = A.iter().last().unwrap().clone();
+//    let mut X_A: Matrix = X.col(j).into();
+//    let mut G_A = X_A.pseudo_inv();
+//    let mut delta = &G_A * &r;
+//    let mut beta_temp = delta.mul_s(alpha);
+//    A.iter().zip(beta_temp.iter()).for_each(|(i, b)| beta[*i] = *b);
+//    A.print();
+//    beta_temp.print();
+//    
+//    'outer: for k in 0 .. X.col {
+//        r = r.sub_v(&X_A.apply(&beta));
+//        match find_max_corr(X, &r, &A) {
+//            Some(i) => j = i,
+//            None => break,
+//        }
+//        //let mut stack = 0usize;
+//        while j == j_prev {
+//            let delta_prev = delta.clone();
+//            delta = &G_A * &r;
+//            if delta[0] * delta_prev[0] < 0f64 {
+//                alpha *= 0.01;
+//                delta = delta_prev;
+//            }
+//            beta_temp = beta_temp.add_v(&delta.mul_s(alpha));
+//            r = r.sub_v(&X_A.apply(&beta_temp));
+//            match find_max_corr(X, &r, &A) {
+//                Some(i) => j = i,
+//                None => break 'outer,
+//            }
+//            delta.print();
+//            //stack += 1;
+//            //stack.print();
+//        }
+//        alpha = alpha_origin;
+//        j_prev = j;
+//        A.print();
+//        A.iter().zip(beta_temp.iter()).for_each(|(i, b)| beta[*i] = *b);
+//        if k == X.col-1 {
+//            break
+//        }
+//        j.print();
+//        A.push(j);
+//        X_A.add_col_mut(&X.col(j));
+//        G_A = X_A.pseudo_inv();
+//        delta = G_A.apply(&r);
+//        beta_temp.push(0f64);
+//        beta_temp = beta_temp.add_v(&delta.mul_s(alpha));
+//    }
+//    A.iter().zip(beta_temp.iter()).for_each(|(i, b)| beta[*i] = *b);
+//    beta
+//}
+//
+//fn find_max_corr(X: &Matrix, target: &Vec<f64>, ignore: &Vec<usize>) -> Option<usize> {
+//    let ref_vec = X.col_reduce(|c| cor(&c, target));
+//    let mut removed = vec![-2f64; ref_vec.len()];
+//    let mut stack = 0usize;
+//    for (i, v) in ref_vec.into_iter().enumerate() {
+//        if !ignore.contains(&i) {
+//            removed[i] = v;
+//            stack += 1;
+//        }
+//    }
+//    match stack {
+//        0 => None,
+//        _ => Some(removed.arg_max())
+//    }
+//}
 
 // =============================================================================
 // OOP implementation
