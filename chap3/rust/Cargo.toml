@@ -7,3 +7,4 @@ edition = "2018"
 
 [dependencies]
 peroxide = { version="0.30", features=["nc", "O3"] }
+itertools = "0.10"

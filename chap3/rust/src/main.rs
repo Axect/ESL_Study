@@ -1,6 +1,7 @@
 #[macro_use]
 extern crate peroxide;
 use peroxide::fuga::*;
+use itertools::izip;
 
 fn main() {
     // Generate random data
@@ -13,7 +14,7 @@ fn main() {
     for j in 0 .. X.col {
         X.subs_col(j, &x.fmap(|t| phi(j as f64/ 100f64, 0.1f64, t)));
     }
-    
+
     //let X = hstack!(x.clone(), x.fmap(|t| t.powi(2)), x.fmap(|t| t.powi(3)), x.fmap(|t| t.powi(4)));
 
     // OLS Estimator
@@ -26,62 +27,26 @@ fn main() {
     ridge.estimate();
     ridge.stat_test();
 
-    ols.summary();
+    //ols.summary();
     println!("");
 
-    ridge.summary();
+    //ridge.summary();
 
     // Lasso
-    let mut X_s = X;
-    X_s.col_mut_map(|c| c.div_s(c.norm(Norm::L2)));
-    let y_c = y.centered();
-
-    let beta_init = find_beta_hat(&X_s, &y);
-
-    let beta = lasso(&beta_init, &X_s, &y, 1e-10, 500);
-    beta.print();
-    let y_new = (X_s * beta);
+    let mut lasso = LinReg::new(&X, &y, Method::Lasso(0.1));
+    lasso.beta().print();
+    lasso.estimate();
 
     let mut df = DataFrame::new(vec![]);
     df.push("x", Series::new(x));
     df.push("y", Series::new(y));
     df.push("y_ols", Series::new(ols.y_hat().clone()));
     df.push("y_ridge", Series::new(ridge.y_hat().add_s(y_bar)));
-    df.push("y_lasso", Series::new(y_new));
+    df.push("y_lasso", Series::new(lasso.y_hat().clone()));
 
     df.print();
 
     df.write_nc("data/lasso.nc").expect("Can't write nc file");
-
-
-    //// OLS Estimator
-    //let mut ols = LinReg::new(&x.clone().into(), &y, Method::OLS);
-    //ols.estimate();
-    //ols.stat_test();
-
-    //let mut ridge = LinReg::new(&x.clone().into(), &y, Method::Ridge(1f64));
-    //ridge.estimate();
-    //ridge.stat_test();
-
-    //ols.summary();
-    //println!("");
-
-    //ridge.summary();
-
-    //let beta_hat = ols.beta();
-    //let y_hat= ols.y_hat();
-    //let sigma_hat = ols.sigma_hat();
-    //let t_score = ols.t_score();
-    //let p_value = ols.p_value();
-
-    //// Save data to plot
-    //let mut df = DataFrame::new(vec![]);
-    //df.push("x", Series::new(x));
-    //df.push("y", Series::new(y));
-    //df.push("y_hat", Series::new(y_hat.clone()));
-
-    //df.print();
-    //df.write_nc("data/data.nc").expect("Can't write nc file");
 }
 
 // =============================================================================
@@ -138,7 +103,8 @@ pub fn phi(j: f64, s: f64, x: f64) -> f64 {
 // =============================================================================
 // Coordinate Descent
 // =============================================================================
-fn lasso(beta_init: &Vec<f64>, X: &Matrix, y: &Vec<f64>, lam: f64, num_iters: usize) -> Vec<f64> {
+#[allow(non_snake_case)]
+fn coordinate_descent_lasso(beta_init: &Vec<f64>, X: &Matrix, y: &Vec<f64>, lam: f64, num_iters: usize) -> Vec<f64> {
     let N = X.row;
     let p = X.col;
     let mut beta = beta_init.clone();
@@ -147,108 +113,27 @@ fn lasso(beta_init: &Vec<f64>, X: &Matrix, y: &Vec<f64>, lam: f64, num_iters: us
         for j in 0 .. p {
             let y_hat = X * &beta;
             let x_j = X.col(j);
-            let rho = x_j.dot(&(y.sub_v(&y_hat).add_v(&x_j.mul_s(beta[j]))));
+            let rho = x_j.dot(
+                &izip!(y, &y_hat, &x_j)
+                    .map(|(a, b, c)| a - b + c * beta[j])
+                    .collect::<Vec<f64>>()
+            );
+            //let rho = x_j.dot(&(y.sub_v(&y_hat).add_v(&x_j.mul_s(beta[j]))));
             beta[j] = soft_threshold(rho, lam);
         }
     }
     beta
 }
 
-
-fn soft_threshold(beta: f64, lam: f64) -> f64 {
-    if beta < -lam {
-        beta + lam
-    } else if beta > lam {
-        beta - lam
+fn soft_threshold(rho: f64, lam: f64) -> f64 {
+    if rho < -lam {
+        rho + lam
+    } else if rho > lam {
+        rho - lam
     } else {
         0f64
     }
 }
-
-// =============================================================================
-// LAR
-// =============================================================================
-///// # Condition
-///// * X should be standardized
-///// * y should be centered
-//#[allow(non_snake_case)]
-//fn lar(y: &Vec<f64>, X: &Matrix, alpha_origin: f64) -> Vec<f64> {
-//    // Initial Step (k=1)
-//    let mut alpha = alpha_origin;
-//    let mut y_hat = vec![0f64; y.len()];
-//    let mut r = y.clone();
-//    let mut beta = vec![0f64; X.col];
-//    let mut A = vec![];
-//    let mut j = find_max_corr(X, &r, &A).unwrap();
-//    j.print();
-//    A.push(j);
-//    let mut j_prev = A.iter().last().unwrap().clone();
-//    let mut X_A: Matrix = X.col(j).into();
-//    let mut G_A = X_A.pseudo_inv();
-//    let mut delta = &G_A * &r;
-//    let mut beta_temp = delta.mul_s(alpha);
-//    A.iter().zip(beta_temp.iter()).for_each(|(i, b)| beta[*i] = *b);
-//    A.print();
-//    beta_temp.print();
-//    
-//    'outer: for k in 0 .. X.col {
-//        r = r.sub_v(&X_A.apply(&beta));
-//        match find_max_corr(X, &r, &A) {
-//            Some(i) => j = i,
-//            None => break,
-//        }
-//        //let mut stack = 0usize;
-//        while j == j_prev {
-//            let delta_prev = delta.clone();
-//            delta = &G_A * &r;
-//            if delta[0] * delta_prev[0] < 0f64 {
-//                alpha *= 0.01;
-//                delta = delta_prev;
-//            }
-//            beta_temp = beta_temp.add_v(&delta.mul_s(alpha));
-//            r = r.sub_v(&X_A.apply(&beta_temp));
-//            match find_max_corr(X, &r, &A) {
-//                Some(i) => j = i,
-//                None => break 'outer,
-//            }
-//            delta.print();
-//            //stack += 1;
-//            //stack.print();
-//        }
-//        alpha = alpha_origin;
-//        j_prev = j;
-//        A.print();
-//        A.iter().zip(beta_temp.iter()).for_each(|(i, b)| beta[*i] = *b);
-//        if k == X.col-1 {
-//            break
-//        }
-//        j.print();
-//        A.push(j);
-//        X_A.add_col_mut(&X.col(j));
-//        G_A = X_A.pseudo_inv();
-//        delta = G_A.apply(&r);
-//        beta_temp.push(0f64);
-//        beta_temp = beta_temp.add_v(&delta.mul_s(alpha));
-//    }
-//    A.iter().zip(beta_temp.iter()).for_each(|(i, b)| beta[*i] = *b);
-//    beta
-//}
-//
-//fn find_max_corr(X: &Matrix, target: &Vec<f64>, ignore: &Vec<usize>) -> Option<usize> {
-//    let ref_vec = X.col_reduce(|c| cor(&c, target));
-//    let mut removed = vec![-2f64; ref_vec.len()];
-//    let mut stack = 0usize;
-//    for (i, v) in ref_vec.into_iter().enumerate() {
-//        if !ignore.contains(&i) {
-//            removed[i] = v;
-//            stack += 1;
-//        }
-//    }
-//    match stack {
-//        0 => None,
-//        _ => Some(removed.arg_max())
-//    }
-//}
 
 // =============================================================================
 // OOP implementation
@@ -278,21 +163,26 @@ pub enum Method {
 
 impl LinReg {
     pub fn new(x: &Matrix, y: &Vec<f64>, method: Method) -> Self {
-        let (x_mat, y_vec) = match method {
+        let (x_mat, y_vec, beta) = match method {
             Method::OLS => {
-                (add_bias(x.clone()), y.clone())
+                (add_bias(x.clone()), y.clone(), None)
             }
-            _ => {
-                (x.standardize(), y.centered())
+            Method::Ridge(_) => {
+                (x.standardize(), y.centered(), None)
+            }
+            Method::Lasso(_) => {
+                println!("Hi");
+                (x.normalized(), y.centered(), Some(vec![1f64; x.col]))
             }
         };
+        println!("Normalized Success");
         
         Self {
             input: x_mat,
             output: y_vec,
             N: y.len(),
             p: x.col,
-            beta: None,
+            beta,
             y_hat: None,
             sigma_hat: None,
             t_score: None,
@@ -380,15 +270,18 @@ impl LinReg {
 
                 let beta = cat(beta_0, &beta_ridge);
 
-                println!("beta: {:?}", beta);
                 let y_hat = &(add_bias(self.input().clone())) * &beta;
 
                 self.beta = Some(beta);
                 self.y_hat = Some(y_hat);
                 self._cached_svd = Some(x_svd);
             }
-            Method::Lasso(_lam) => {
-                todo!()
+            Method::Lasso(lam) => {
+                let beta_hat = coordinate_descent_lasso(self.beta(), self.input(), self.output(), lam, 200);
+                let y_hat = (self.input() * &beta_hat).add_s(self.output().mean());
+
+                self.beta = Some(beta_hat);
+                self.y_hat = Some(y_hat);
             }
         }
     }
@@ -460,6 +353,7 @@ impl LinReg {
 pub trait Scaled {
     fn standardize(&self) -> Self;
     fn centered(&self) -> Self;
+    fn normalized(&self) -> Self;
 }
 
 impl Scaled for Vec<f64> {
@@ -472,6 +366,11 @@ impl Scaled for Vec<f64> {
     fn centered(&self) -> Self {
         let y_bar = self.mean();
         self.sub_s(y_bar)
+    }
+
+    fn normalized(&self) -> Self {
+        let norm = self.norm(Norm::L2);
+        self.div_s(norm)
     }
 }
 
@@ -497,5 +396,9 @@ impl Scaled for Matrix {
             m.subs_col(i, &v);
         }
         m
+    }
+
+    fn normalized(&self) -> Self {
+        self.col_map(|c| c.div_s(c.norm(Norm::L2)))
     }
 }
