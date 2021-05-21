@@ -15,13 +15,12 @@ def main():
     y = np.sin(x) + (x / 3) ** 2 + 0.1 * err
     #y = np.sin(x) + 0.1 * err
 
-    X = np.matrix(np.column_stack([x ** i for i in range(2, 5)] + [np.sin(x)]))
+    #X = np.matrix(np.column_stack([x ** i for i in range(2, 5)] + [np.sin(x)]))
     #X = np.matrix(np.column_stack([x ** i for i in range(2, 6)]))
-    #X = np.matrix(np.column_stack([phi(j/10, 1, x) for j in range(31)]))
+    X = np.matrix(np.column_stack([phi(j/10, 0.1, x) for j in range(31)]))
     Xb = sm.add_constant(X)
     Y = np.matrix(y).T
     X_s = standardize(X)
-
 
     # ==============================================================================
     # OLS, Ridge, Lasso
@@ -42,8 +41,9 @@ def main():
     u, d, vt = np.linalg.svd(X_s, full_matrices=False)
     print(d)
     v = vt.T
-    M = 1
+    M = 31
     p = v.shape[1]
+    print(p)
     z = []
     theta = []
     s = np.zeros((Y.shape[0], 1))
@@ -52,7 +52,7 @@ def main():
     for i in range(M):
         z_m = X_s * v[:, i] # N x 1
         z.append(z_m)
-        theta_m = (z_m.T * Y / (z_m.T * z_m))[0,0]
+        theta_m = (z_m.T * Y_c / (z_m.T * z_m))[0,0]
         theta.append(theta_m)
         s += theta_m * z_m
 
@@ -65,7 +65,7 @@ def main():
     plt.rc('font', family='serif')
     # Prepare Plot
     plt.figure(figsize=(10,6), dpi=300)
-    plt.title(r"OLS, Ridge, Lasso \& PCR", fontsize=16)
+    plt.title(r"Gaussian OLS, Ridge, Lasso \& PCR", fontsize=16)
     plt.xlabel(r'$x$', fontsize=14)
     plt.ylabel(r'$y$', fontsize=14)
 
@@ -74,11 +74,11 @@ def main():
     plt.plot(x, np.asarray(ols.y_hat).ravel(), color='r', alpha=0.7, label=r'OLS')
     plt.plot(x, y_ridge, color='g', alpha=0.7, label=r'Ridge')
     plt.plot(x, y_lasso, color='purple', alpha=0.7, label=r'Lasso')
-    plt.plot(x, y_pcr, color='black', label=r'PCR(1)')
+    plt.plot(x, y_pcr, color='black', label=r'PCR(' + str(M) + ')')
 
     # Other options
     plt.legend(fontsize=12)
-    plt.savefig("pcr_simple_1.png", dpi=300)
+    plt.savefig("pcr_gaussian_"+str(M)+".png", dpi=300)
 
 
 # ==============================================================================
