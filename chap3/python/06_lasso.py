@@ -26,7 +26,7 @@ def main():
     ridge.estimate()
     ridge.test()
 
-    lasso = LassoReg(X, center(Y), 1e-15)
+    lasso = LassoReg(X, Y, 1e-15)
     lasso.estimate()
 
     print("OLS: ")
@@ -49,7 +49,7 @@ def main():
         plt.scatter(x, y, label='Data')
         plt.plot(x, np.asarray(ols.y_hat).ravel(), 'r', label='OLS')
         plt.plot(x, np.asarray(ridge.true_y_hat).ravel(), 'g', label='Ridge')
-        plt.plot(x, np.asarray(lasso.y_hat + Y.mean(axis=0)).ravel(), color='purple', alpha=0.5, label='Lasso')
+        plt.plot(x, np.asarray(lasso.y_hat).ravel(), color='purple', alpha=0.5, label='Lasso')
 
         # Other options
         plt.legend(fontsize=12)
@@ -79,7 +79,7 @@ def main():
     ridge.estimate()
     ridge.test()
 
-    lasso = LassoReg(X, center(Y), 0.01)
+    lasso = LassoReg(X, Y, 0.01)
     lasso.estimate()
 
     ##print("OLS: ")
@@ -102,7 +102,7 @@ def main():
     plt.scatter(x, y, color="blue", alpha=0.1, label=r'Data')
     plt.plot(x, np.asarray(ols.y_hat).ravel(), color='r', alpha=0.7, label=r'OLS')
     plt.plot(x, np.asarray(ridge.true_y_hat).ravel(), color='g', alpha=0.7, label=r'Ridge')
-    plt.plot(x, np.asarray(lasso.y_hat + Y.mean(axis=0)).ravel(), color='purple', alpha=0.7, label=r'Lasso')
+    plt.plot(x, np.asarray(lasso.y_hat).ravel(), color='purple', alpha=0.7, label=r'Lasso')
 
     # Other options
     plt.legend(fontsize=12)
@@ -275,13 +275,14 @@ class RidgeReg(OLSEstimator):
 class LassoReg(OLSEstimator):
     def __init__(self, X, Y, lam):
         self.X = X / np.linalg.norm(X, axis=0)
-        self.Y = Y
+        self.Y = center(Y)
+        self.beta_0 = Y.mean(axis=0)
         self.lam = lam
         self.beta = np.matrix(np.ones((X.shape[1], 1)))
 
     def estimate(self):
         self.beta_hat = coordinate_descent_lasso(self.beta, self.X, self.Y, self.lam)
-        self.y_hat = find_y_hat(self.X, self.beta_hat)
+        self.y_hat = find_y_hat(self.X, self.beta_hat) + self.beta_0
 
 if __name__ == "__main__":
     main()

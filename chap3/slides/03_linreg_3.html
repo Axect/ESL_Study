@@ -1,0 +1,449 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>03 Linear Regression 3</title>
+    <meta charset="utf-8">
+    <link rel="stylesheet" type="text/css" href="socialst.css">
+    <link rel="stylesheet" type="text/css" href="additional.css">
+  </head>
+  <body>
+    <textarea id="source">
+
+
+layout: true
+<div class="my-header">
+  <p class="align_left"><img src="images/yonsei_logo.png" style="height: 30px;"/></p>
+  <p class="align_right"><b>Linear Regression 3</b></p>
+</div>
+<div class="my-footer">
+  <p class="align_right"><b>2021.05.21 ML Study</b></p>
+  <p class="align_left"><b>Tae Geun Kim</b></p>
+</div>
+
+---
+
+class: center, middle
+
+# Linear Regression
+
+<h4 style="color:brown">Part III: Various Algorithms</h4>
+
+<h3 style="color: darkblue">Tae Geun Kim</h3>
+
+---
+
+## Table of Contents
+
+--
+
+* LASSO
+
+--
+
+* Principal Component Regression
+
+---
+
+class: center, middle
+
+# LASSO
+
+---
+
+### Find `\(\small \hat{\beta}\)` for Lasso
+
+Lasso cost function is given as :
+
+$$
+\small
+\begin{align}
+\text{PRSS}^{\text{lasso}}(\beta) &= \frac{1}{2}\text{RSS}(\beta) + \lambda \lVert \beta \rVert\_1 \\\\
+&= \frac{1}{2} \sum\_{i=1}^N \left[ y\_i - \sum\_{j=1}^p x\_{ij}\beta\_j \right]^2 + \lambda \sum\_{j=1}^p \lvert \beta\_j \rvert
+\end{align}
+$$
+
+--
+
+We can decompose `\(\small \text{RSS}\)` term as follows:
+
+$$
+\small
+\begin{align}
+\frac{\partial}{\partial \beta\_j} \text{RSS}(\beta) &= - \sum\_{i=1}^N x\_{ij} \left[y\_i - \sum\_{k \neq j}^p x\_{ik}\beta\_k - x\_{ij}\beta\_j \right] \\\\
+&= - \sum\_{i=1}^N x\_{ij} \left[ y\_i - \sum\_{k\neq j}x\_{ik}\beta\_k \right] + \beta\_j \sum\_{i=1}^N x\_{ij}^2 \\\\
+&\equiv -\rho\_j + \beta\_j z\_j
+\end{align}
+$$
+
+---
+
+### Find `\(\small \hat{\beta}\)` for Lasso
+
+Now, focus on the `\(\small L_1\)` term:
+
+$$
+\small
+\lambda \sum\_{j=1}^p \lvert \beta\_j \rvert = \lambda \lvert \beta\_j \rvert + \lambda \sum\_{k\neq j}^p \lvert \beta\_k \rvert
+$$
+
+--
+And differentiate it with **subdifferential**:
+
+$$
+\small
+\partial\_{\beta\_j}\lambda \sum\_{j=1}^p |\beta\_j | = \partial\_{\beta\_j}\lambda \lvert \beta\_j\rvert
+= \begin{cases}
+\left\\{ -\lambda \right\\} & \text{if } \beta\_j < 0 \\\\
+\left[ -\lambda, \lambda \right] & \text{if }\beta\_j = 0 \\\\
+\left\\{ \lambda \right\\} & \text{if } \beta\_j > 0
+\end{cases}
+$$
+
+--
+And we need some theorems for subdifferential:
+
+* **Moreau-Rockafellar theorem**: If `\(\small f,g\)` are both convex with subdifferentials `\(\small \partial f,\,\partial g\)`
+then the subdifferential of `\(\small f + g\)` is `\(\small \partial f + \partial g\)`
+
+* **Stationary condition**: A point `\(\small x_0\)` is the **global minimum** of a convex function `\(\small f\)` iff the **zero** is contained in the subdifferential.
+
+---
+
+### Find `\(\small \hat{\beta}\)` for Lasso
+
+Then let's put it together :
+
+$$
+\begin{align}
+\partial\_{\beta\_j} \text{PRSS}^{\text{lasso}}(\beta) &= - \rho\_j + \beta\_j z\_j + \partial\_{\beta\_j} \lambda \lvert \beta\_j \rvert \\\\
+0 &= \begin{cases}
+-\rho\_j + \beta\_j z\_j - \lambda & \text{if } \beta\_j < 0 \\\\
+[-\rho\_j - \lambda,~-\rho\_j + \lambda] & \text{if } \beta\_j = 0 \\\\
+-\rho\_j + \beta\_j z\_j + \lambda & \text{if } \beta\_j > 0
+\end{cases}
+\end{align}
+$$
+
+--
+
+We know that `\(\small \beta_j = 0\)` is a global minimum, thus, there should be the zero in closed interval of the second case.
+
+$$
+0 \in [ -\rho\_j - \lambda,~-\rho\_j + \lambda ] ~ \Rightarrow ~
+\begin{cases} - \rho\_j - \lambda \leq 0 \\\\ -\rho\_j + \lambda \geq 0
+\end{cases}
+~ \Rightarrow ~ -\lambda \leq \rho\_j \leq \lambda
+$$
+
+---
+
+### Find `\(\small \hat{\beta}\)` for Lasso
+
+Then we can get the solution :
+
+$$
+\hat{\beta}\_j = \begin{cases}
+  \frac{\rho\_j + \lambda}{z\_j} & \text{for }\rho\_j < -\lambda \\\\
+  0 & \text{for } -\lambda \leq \rho \leq \lambda \\\\
+  \frac{\rho\_j - \lambda}{z\_j} & \text{for } \rho\_j > \lambda
+\end{cases}
+$$
+
+--
+
+&nbsp;
+
+And it can be denoted with **Soft-thresholding** function.
+
+$$
+\hat{\beta}\_j = \frac{1}{z\_j} S(\rho\_j, \lambda)
+$$
+
+
+$$
+S(\rho\_j, \lambda) = \begin{cases}
+\rho\_j + \lambda & \text{for }\rho\_j < -\lambda \\\\
+0 & \text{for } -\lambda \leq \rho \leq \lambda \\\\
+\rho\_j - \lambda & \text{for } \rho\_j > \lambda
+\end{cases}
+$$
+
+---
+
+### Implementation of Lasso
+
+[Axect's Github](https://github.com/Axect/ESL_Study/blob/master/chap3/python/06_lasso.py)
+
+---
+
+### F-test
+
+
+<div class="animated-border-quote">
+  <blockquote>
+    <p>
+      $$\small \begin{align}
+        \text{RSS}_0 - \text{RSS}_1 &= \sum_{i=1}^N \{ (y_i - \hat{y}_i^{(0)})^2 - (y_i-\hat{y}_i^{(1)})^2\} \\
+        &= \mathbf{y}^T (\mathbf{I} - \mathbf{H}^{(0)} - \mathbf{I} + \mathbf{H}^{(1)}) \mathbf{y} \\
+        &= \mathbf{y}^T (\mathbf{H}^{(1)} - \mathbf{H}^{(0)}) \mathbf{y}
+      \end{align}$$
+      Since, \(\small \mathbf{H}^{(1)} - \mathbf{H}^{(0)}\) is also symmetric & idempotent, the degree of freedom is : 
+      $$\small \text{tr}(\mathbf{H}^{(0)} - \mathbf{H}^{(1)}) = p_1+1 - (p_0+1) = p_1 - p_0$$
+      \(\small \Rightarrow (\text{RSS}_0 - \text{RSS}_1) / (p_1 - p_0) \sim \sigma^2 \chi^2_{p_1-p_0}\), \(\small \,\text{RSS}_1 / ({N-p_1-1}) \sim \sigma^2 \chi^2_{N-p_1-1}\)  
+      <br/>
+      <br/>
+      \(\small \displaystyle \Rightarrow \frac{(\text{RSS}_0 - \text{RSS}_1) / (p_1 - p_0)}{\text{RSS}_1 / (N-p_1 - 1)} \,\sim\, \frac{\sigma^2\chi^2_{p_1 - p_0}}{\sigma^2 \chi^2_{N-p_1-1}} \,\sim\, F_{p_1-p_0,\,N-p_1-1}\)
+    </p>
+  </blockquote>
+</div>
+
+---
+
+class: center, middle
+
+# Implementation
+
+---
+
+### Raw Code for Estimation
+
+```python
+import numpy as np
+import statsmodels.api as sm
+
+def find_beta_hat(X, y): # X should be np.matrix
+    return np.linalg.pinv(X) * y
+
+def find_y_hat(X, beta, y):
+    return X * beta
+
+# Example
+np.random.seed(42)
+x = np.arange(1, 5, 0.1)
+err = np.random.randn(len(x))
+y = 2 * x + 3 + err
+
+X = np.matrix(x).T
+X = sm.add_constant(X)
+Y = np.matrix(y).T
+
+beta = find_beta_hat(X, Y)
+y_hat = find_y_hat(X, beta, Y)
+```
+
+---
+
+### Raw Code for test
+
+```python
+def find_sigma_hat(y, y_hat, p):
+    return np.sum((y - y_hat)**2) / (len(y) - p - 1)
+
+def calc_t_score(beta, X, sigma):
+    v = np.sqrt(np.diag(np.linalg.inv(X.T * X)))
+    return (beta / v) / np.sqrt(sigma)
+
+def calc_rss(y, y_hat):
+    return np.sum((y - y_hat)**2)
+
+def calc_F_score(rss_0, p_0, rss_1, p_1, N):
+    return ((rss_0 - rss_1) / (p_1 - p_0)) / (rss_1 / (N - p_1 - 1))
+
+def calc_p_value(d, z):
+    if z >= 0:
+        return (1 - d.cdf(z)) * 2
+    else:
+        return 1
+```
+
+--
+
+* But it's too dirty... 
+
+--
+`\(\,\Rightarrow\,\)` Use OOP
+
+---
+
+### OOP Implementations of OLS
+
+* View [Code](https://github.com/Axect/ESL_Study/blob/master/chap3/python/ols.py)
+
+---
+
+class: center, middle
+
+# Gauss-Markov Theorem
+
+---
+
+### Gauss-Markov Theorem
+
+We focus on estimation of any linear combination of the parameters : `\(\theta = a^T \beta\)`
+
+--
+
+* OLS estimator of `\(\small \theta\)` :
+$$\small \hat{\theta} = a^T\hat{\beta} = a^T(\mathbf{X}^T\mathbf{X})^{-1}\mathbf{X}^T \mathbf{y}$$
+
+--
+
+* Any other linear unbiased estimator :
+$$\small \tilde{\theta} = \mathbf{c}^T \mathbf{y}$$
+
+--
+
+* **Gauss-Markov Theorem** :
+<div class="animated-border-quote">
+  <blockquote>
+    <p>
+      For any linear unbiased estimator \(\small \tilde{\theta} = \mathbf{c}^T\mathbf{y}\), that is, \(\small E(\mathbf{c}^T\mathbf{y}) = a^T \beta\), then
+      $$\text{Var}(a^T\hat{\beta}) \leq \text{Var}(\mathbf{c}^T \mathbf{y})$$
+    </p>
+  </blockquote>
+</div>
+
+---
+
+### Gauss-Markov Theorem (Proof)
+
+<div class="animated-border-quote">
+  <blockquote>
+    <p>
+      Since \(\small \mathbf{c}^T\) is linear, we can write \(\small \mathbf{c}^T = a^T(\mathbf{X}^T\mathbf{X})^{-1}\mathbf{X}^T + \mathbf{d}^T\) for some constant \(\small \mathbf{d}^T\).
+      $$\small \begin{align}
+      E(\mathbf{c}^T\mathbf{y}) &= \mathbf{E} \left\{(a^T(\mathbf{X}^T\mathbf{X})^{-1} \mathbf{X}^T + \mathbf{d}^T ) \mathbf{y}\right\} \\
+      &= (a^T \mathbf{X}^\dagger + \mathbf{d}^T) E(\mathbf{y}) \\
+      &= a^T \mathbf{X}^\dagger\mathbf{X} \beta + \mathbf{d}^T\mathbf{X}\mathbf{\beta} = a^T \beta + \mathbf{d}^T \mathbf{X}\beta
+      \end{align}$$
+      Because of unbiased-ness, \(\small \mathbf{d}^T \mathbf{X} = 0\). Then
+      $$\small \begin{align}
+        \text{Var}(\mathbf{c}^T\mathbf{y}) &= \mathbf{c}^T \text{Var}(\mathbf{y})\mathbf{c} = \sigma^2 \mathbf{c}^T\mathbf{c} \\
+        &= \sigma^2 (a^T(\mathbf{X}^T\mathbf{X})^{-1} \mathbf{X}^T + \mathbf{d}^T)(\mathbf{X}(\mathbf{X}^T\mathbf{X})^{-1} a + \mathbf{d}) \\
+        &= \sigma^2 \left\{ a^T(\mathbf{X}^T\mathbf{X})^{-1}a + \mathbf{d}^T\mathbf{d} \right\} \\
+        &= a^T\left\{\sigma^2(\mathbf{X}^T\mathbf{X})^{-1} \right\}a + \sigma^2 \mathbf{d}^T\mathbf{d} \\
+        &= \text{Var}(\hat{\theta}) + \sigma^2 \mathbf{d}^T\mathbf{d} \geq \text{Var}(\hat{\theta})
+      \end{align}$$
+    </p>
+  </blockquote>
+</div>
+
+---
+
+### Orthogonalization
+
+Next, consider `\(\small p>1\)` that the inputs `\(\small \mathbf{x}_1, \mathbf{x}_2, \cdots, \mathbf{x}_p\)` are orthogonal.
+
+--
+
+.center[
+<div class="animated-border-quote">
+  <blockquote>
+    <p>
+      $$\small \begin{align}
+      &\hat{\beta} = (\mathbf{X}^T\mathbf{X})^{-1} \mathbf{X}^T\mathbf{y} \\
+      \Rightarrow~&\hat{\beta}_j = \sum_{k=1}^N \left[(\mathbf{X}^T\mathbf{X})^{-1}\right]_{jk} \left[\mathbf{X}^T\mathbf{y}\right]_k = \left[(\mathbf{X}^T\mathbf{X})^{-1}\right]_{jj} \left[\mathbf{X}^T \mathbf{y}\right]_{jj} \\
+      \Rightarrow~&\hat{\beta}_j = \frac{\left< \mathbf{x}_j,\mathbf{y}\right>}{\left< \mathbf{x}_j,\mathbf{x}_j\right>}
+      \end{align}$$
+    </p>
+  </blockquote>
+</div>
+]
+
+
+---
+
+### Regression by Successive Orthogonalization
+
+In RSO algorithm, we can rewrite *Gram-Schmidt* part in matrix form.
+
+--
+
+$$\small \begin{align}
+\mathbf{z}\_j &= \mathbf{x}\_j - \sum\_{k=0}^{j-1} \hat{\gamma}\_{kj} \mathbf{z}\_k \\\\
+\Rightarrow ~ \mathbf{x}\_j &= \sum\_{k=0}^{j-1} \hat{\gamma}\_{kj} \mathbf{z}\_k + \mathbf{z}\_j = \sum\_{k=0}^j \tilde{\gamma}\_{kj} z\_k\\\\
+\Rightarrow ~ \mathbf{X} &= \mathbf{Z}{\mathbf{\Gamma}}
+\end{align}$$
+
+where `\(\small \mathbf{Z}\)` has as columns the `\(\mathbf{z}_j\)`, and `\(\small \mathbf{\Gamma}\)` is the upper triangular matrix.
+
+--
+
+Let introduce the diagonal matrix `\(\small \mathbf{D} = (D_{jj}) = \lVert \mathbf{z}_j\rVert \)`, then
+
+--
+
+$$ \mathbf{X} = \mathbf{Z}\mathbf{D}^{-1}\mathbf{D}\mathbf{\Gamma} = \mathbf{Q}\mathbf{R} $$
+
+where `\(\small \mathbf{Q}\)` is an `\(\small N \times (p+1)\)` orthogonal matrix and `\(\small \mathbf{R}\)` is a `\(\small (p+1)\times(p+1)\)` upper triangular matrix.
+
+--
+
+It is called **QR** decomposition.
+
+---
+
+### OLS with QR decomposition
+
+.center[
+<div class="animated-border-quote">
+  <blockquote>
+    <p>
+      $$\small \begin{align}
+        \hat{\beta} &= (\mathbf{X}^T\mathbf{X})^{-1}\mathbf{X}^T\mathbf{y} \\
+        &= (\mathbf{R}^T\mathbf{Q}^T\mathbf{Q}\mathbf{R})^{-1} \mathbf{R}^T\mathbf{Q}^T \mathbf{y} \\
+        &= (\mathbf{R}^T\mathbf{R})^{-1} \mathbf{R}^T \mathbf{Q}^T \mathbf{y} \\
+      \Rightarrow ~ \mathbf{R}^T\mathbf{R}\hat{\beta} &= \mathbf{R}^T\mathbf{Q}^T \mathbf{y} \\
+      \therefore ~ \hat{\beta} &= \mathbf{R}^{-1}\mathbf{Q}^T\mathbf{y},\quad \hat{\mathbf{y}} = \mathbf{Q}\mathbf{Q}^T\mathbf{y}
+      \end{align}$$
+    </p>
+  </blockquote>
+</div>
+]
+
+---
+
+### References
+
+* T. Hastie et al., *The Elements of Statistical Learning 2nd ed*, Springer (2009)
+
+---
+
+class: center, middle
+
+# Thank you!
+
+
+
+    </textarea>
+    <!-- <script src="https://remarkjs.com/downloads/remark-latest.min.js"></script> -->
+    <script src="./remark-latest.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-AMS_HTML&delayStartupUntil=configured" type="text/javascript"></script>
+    <!-- <script src="./MathJax.js" type="text/javascript"></script> -->
+    <script>
+      var slideshow = remark.create({
+          ratio: '4:3',
+
+          highlightLanguage: 'rust',
+          highlightStyle: 'monokai',
+          highlightLines: 'true',
+          highlightSpans: 'true'
+      });
+
+      // Setup MathJax
+      MathJax.Hub.Config({
+          tex2jax: {
+          inlineMath: [['$','$'], ['\\(','\\)']],
+          skipTags: ['script', 'noscript', 'style', 'textarea', 'pre']
+          }
+      });
+      MathJax.Hub.Queue(function() {
+          $(MathJax.Hub.getAllJax()).map(function(index, elem) {
+              return(elem.SourceElement());
+          }).parent().addClass('has-jax');
+      });
+
+      MathJax.Hub.Configured();
+    </script>
+  </body>
+</html>
