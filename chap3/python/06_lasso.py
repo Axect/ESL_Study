@@ -177,10 +177,10 @@ def soft_threshold(rho, lam):
         return 0
 
 def coordinate_descent_lasso(beta, X, y, lam=0.01, num_iters=100):
-    m, n = X.shape
+    N, p = X.shape
 
     for i in range(num_iters):
-        for j in range(n):
+        for j in range(p):
             y_hat = X * beta
             rho = X[:,j].T * (y - y_hat + beta[j,0] * X[:,j])
 
