@@ -156,11 +156,13 @@ $$
 And it can be denoted with **Soft-thresholding** function.
 
 $$
+\small
 \hat{\beta}\_j = \frac{1}{z\_j} S(\rho\_j, \lambda)
 $$
 
 
 $$
+\small
 S(\rho\_j, \lambda) = \begin{cases}
 \rho\_j + \lambda & \text{for }\rho\_j < -\lambda \\\\
 0 & \text{for } -\lambda \leq \rho \leq \lambda \\\\
@@ -170,236 +172,108 @@ $$
 
 ---
 
+### Find `\(\small \hat{\beta}\)` for Lasso
+
+To find `\(\small \hat{\beta}_j\)`, we need some iterations - called **Coordinate descent**.
+
+--
+
+**Coordinate descent update rule** :
+
+* For `\(\small 1 \leq j \leq p\)`
+
+* Compute `\(\small \displaystyle \rho_j = \sum_{i=1}^N x_{ij} (y_i - \sum_{k\neq j}^p x_{ik}\beta_k) \)`
+
+* Compute `\(\small \displaystyle z_j = \sum_{i=1}^N x_{ij}^2\)` 
+`\(\small ~ \Rightarrow\)` If we normalize `\(\small \mathbf{X}\)` then we can omit this process
+
+* Set `\(\small \displaystyle \beta_j = \frac{1}{z_j}S(\rho_j, \lambda)\)`
+
+* Repeat above processes for the number of iterations or until convergence.
+
+---
+
+### Summary of Lasso
+
+1. **Normalize** input via `\(\small L_2\)` norm:
+  $$\small \displaystyle z\_j = \sum\_{i=1}^N x\_{ij} = 1 $$
+
+2. **Center** response: 
+  $$\mathbf{y}^c = \mathbf{y} - \bar{\mathbf{y}}$$
+
+3. Calculate `\(\small \hat{\beta_j}\)` via **Coordinate descent rule**.
+
+4. Calculate `\(\small\hat{\mathbf{y}}^c\)`:
+$$\small \hat{\mathbf{y}}^c = \frac{\mathbf{X}}{\lVert \mathbf{X} \rVert} \hat{\beta}$$
+
+5. Add intercept:
+$$\small \hat{\mathbf{y}} = \bar{\mathbf{y}} + \hat{\mathbf{y}}^c$$
+
+---
+
 ### Implementation of Lasso
 
 [Axect's Github](https://github.com/Axect/ESL_Study/blob/master/chap3/python/06_lasso.py)
 
 ---
 
-### F-test
-
-
-<div class="animated-border-quote">
-  <blockquote>
-    <p>
-      $$\small \begin{align}
-        \text{RSS}_0 - \text{RSS}_1 &= \sum_{i=1}^N \{ (y_i - \hat{y}_i^{(0)})^2 - (y_i-\hat{y}_i^{(1)})^2\} \\
-        &= \mathbf{y}^T (\mathbf{I} - \mathbf{H}^{(0)} - \mathbf{I} + \mathbf{H}^{(1)}) \mathbf{y} \\
-        &= \mathbf{y}^T (\mathbf{H}^{(1)} - \mathbf{H}^{(0)}) \mathbf{y}
-      \end{align}$$
-      Since, \(\small \mathbf{H}^{(1)} - \mathbf{H}^{(0)}\) is also symmetric & idempotent, the degree of freedom is : 
-      $$\small \text{tr}(\mathbf{H}^{(0)} - \mathbf{H}^{(1)}) = p_1+1 - (p_0+1) = p_1 - p_0$$
-      \(\small \Rightarrow (\text{RSS}_0 - \text{RSS}_1) / (p_1 - p_0) \sim \sigma^2 \chi^2_{p_1-p_0}\), \(\small \,\text{RSS}_1 / ({N-p_1-1}) \sim \sigma^2 \chi^2_{N-p_1-1}\)  
-      <br/>
-      <br/>
-      \(\small \displaystyle \Rightarrow \frac{(\text{RSS}_0 - \text{RSS}_1) / (p_1 - p_0)}{\text{RSS}_1 / (N-p_1 - 1)} \,\sim\, \frac{\sigma^2\chi^2_{p_1 - p_0}}{\sigma^2 \chi^2_{N-p_1-1}} \,\sim\, F_{p_1-p_0,\,N-p_1-1}\)
-    </p>
-  </blockquote>
-</div>
-
----
-
 class: center, middle
 
-# Implementation
+# Principal Components Regression
 
 ---
 
-### Raw Code for Estimation
+### Principal Components Regression (PCR)
 
-```python
-import numpy as np
-import statsmodels.api as sm
+In Ridge regression, we already learned about *principal components*.
 
-def find_beta_hat(X, y): # X should be np.matrix
-    return np.linalg.pinv(X) * y
+$$
+\mathbf{z}\_m = \mathbf{X} v\_m ~(1\leq m \leq p)~\quad \text{where}\quad \mathbf{X} = \mathbf{U\Sigma V}^T, ~ \mathbf{V} = (v\_m)
+$$
 
-def find_y_hat(X, beta, y):
-    return X * beta
+<br/>
 
-# Example
-np.random.seed(42)
-x = np.arange(1, 5, 0.1)
-err = np.random.randn(len(x))
-y = 2 * x + 3 + err
+--
 
-X = np.matrix(x).T
-X = sm.add_constant(X)
-Y = np.matrix(y).T
+Now, let's take `\(\small M\)` principal components and regress `\(\small \mathbf{y}\)` on it.   
+Since `\(\small \mathbf{z}_m\)` are orthogonal, the regression is just a sum of univariate regressions:
 
-beta = find_beta_hat(X, Y)
-y_hat = find_y_hat(X, beta, Y)
-```
+$$
+\hat{\mathbf{y}}^{\text{pcr}}\_{(M)} = \bar{y} \mathbf{1} + \sum\_{m=1}^M \hat{\theta}\_m \mathbf{z}\_m
+\quad \text{where}\quad \hat{\theta}\_m = \frac{\left< \mathbf{z}\_m, \mathbf{y} \right>}{\left<\mathbf{z}\_m ,\mathbf{z}\_m \right>}
+$$
+
+--
+
+And corresponding parameter is given as follows:
+
+$$
+\hat{\beta}^{\text{pcr}}(M) = \sum\_{m=1}^M \hat{\theta}\_m v\_m
+$$
 
 ---
 
-### Raw Code for test
+### Summary of PCR
 
-```python
-def find_sigma_hat(y, y_hat, p):
-    return np.sum((y - y_hat)**2) / (len(y) - p - 1)
+1. **Standardize** input `\( \mathbf{X}\)`
 
-def calc_t_score(beta, X, sigma):
-    v = np.sqrt(np.diag(np.linalg.inv(X.T * X)))
-    return (beta / v) / np.sqrt(sigma)
+2. **Center** response `\( \mathbf{y}\)`
 
-def calc_rss(y, y_hat):
-    return np.sum((y - y_hat)**2)
+3. Obtain SVD of input : `\( \mathbf{X} = \mathbf{U\Sigma V}^T\)`
 
-def calc_F_score(rss_0, p_0, rss_1, p_1, N):
-    return ((rss_0 - rss_1) / (p_1 - p_0)) / (rss_1 / (N - p_1 - 1))
+4. Set the number of features `\(M\)`
 
-def calc_p_value(d, z):
-    if z >= 0:
-        return (1 - d.cdf(z)) * 2
-    else:
-        return 1
-```
+5. Take `\( \mathbf{z}_m = \mathbf{X} v_m~(1\leq m \leq M)\)`
 
---
+6. Regress `\(\mathbf{y}\)` on `\(\mathbf{z}_1,\,\mathbf{z}_2,\,\cdots,\,\mathbf{z}_M\)`
 
-* But it's too dirty... 
-
---
-`\(\,\Rightarrow\,\)` Use OOP
+7. Add intercept term `\(\bar{y}\mathbf{1}\)`
 
 ---
 
-### OOP Implementations of OLS
+### Implementation of PCR
 
-* View [Code](https://github.com/Axect/ESL_Study/blob/master/chap3/python/ols.py)
-
----
-
-class: center, middle
-
-# Gauss-Markov Theorem
-
----
-
-### Gauss-Markov Theorem
-
-We focus on estimation of any linear combination of the parameters : `\(\theta = a^T \beta\)`
-
---
-
-* OLS estimator of `\(\small \theta\)` :
-$$\small \hat{\theta} = a^T\hat{\beta} = a^T(\mathbf{X}^T\mathbf{X})^{-1}\mathbf{X}^T \mathbf{y}$$
-
---
-
-* Any other linear unbiased estimator :
-$$\small \tilde{\theta} = \mathbf{c}^T \mathbf{y}$$
-
---
-
-* **Gauss-Markov Theorem** :
-<div class="animated-border-quote">
-  <blockquote>
-    <p>
-      For any linear unbiased estimator \(\small \tilde{\theta} = \mathbf{c}^T\mathbf{y}\), that is, \(\small E(\mathbf{c}^T\mathbf{y}) = a^T \beta\), then
-      $$\text{Var}(a^T\hat{\beta}) \leq \text{Var}(\mathbf{c}^T \mathbf{y})$$
-    </p>
-  </blockquote>
-</div>
-
----
-
-### Gauss-Markov Theorem (Proof)
-
-<div class="animated-border-quote">
-  <blockquote>
-    <p>
-      Since \(\small \mathbf{c}^T\) is linear, we can write \(\small \mathbf{c}^T = a^T(\mathbf{X}^T\mathbf{X})^{-1}\mathbf{X}^T + \mathbf{d}^T\) for some constant \(\small \mathbf{d}^T\).
-      $$\small \begin{align}
-      E(\mathbf{c}^T\mathbf{y}) &= \mathbf{E} \left\{(a^T(\mathbf{X}^T\mathbf{X})^{-1} \mathbf{X}^T + \mathbf{d}^T ) \mathbf{y}\right\} \\
-      &= (a^T \mathbf{X}^\dagger + \mathbf{d}^T) E(\mathbf{y}) \\
-      &= a^T \mathbf{X}^\dagger\mathbf{X} \beta + \mathbf{d}^T\mathbf{X}\mathbf{\beta} = a^T \beta + \mathbf{d}^T \mathbf{X}\beta
-      \end{align}$$
-      Because of unbiased-ness, \(\small \mathbf{d}^T \mathbf{X} = 0\). Then
-      $$\small \begin{align}
-        \text{Var}(\mathbf{c}^T\mathbf{y}) &= \mathbf{c}^T \text{Var}(\mathbf{y})\mathbf{c} = \sigma^2 \mathbf{c}^T\mathbf{c} \\
-        &= \sigma^2 (a^T(\mathbf{X}^T\mathbf{X})^{-1} \mathbf{X}^T + \mathbf{d}^T)(\mathbf{X}(\mathbf{X}^T\mathbf{X})^{-1} a + \mathbf{d}) \\
-        &= \sigma^2 \left\{ a^T(\mathbf{X}^T\mathbf{X})^{-1}a + \mathbf{d}^T\mathbf{d} \right\} \\
-        &= a^T\left\{\sigma^2(\mathbf{X}^T\mathbf{X})^{-1} \right\}a + \sigma^2 \mathbf{d}^T\mathbf{d} \\
-        &= \text{Var}(\hat{\theta}) + \sigma^2 \mathbf{d}^T\mathbf{d} \geq \text{Var}(\hat{\theta})
-      \end{align}$$
-    </p>
-  </blockquote>
-</div>
-
----
-
-### Orthogonalization
-
-Next, consider `\(\small p>1\)` that the inputs `\(\small \mathbf{x}_1, \mathbf{x}_2, \cdots, \mathbf{x}_p\)` are orthogonal.
-
---
-
-.center[
-<div class="animated-border-quote">
-  <blockquote>
-    <p>
-      $$\small \begin{align}
-      &\hat{\beta} = (\mathbf{X}^T\mathbf{X})^{-1} \mathbf{X}^T\mathbf{y} \\
-      \Rightarrow~&\hat{\beta}_j = \sum_{k=1}^N \left[(\mathbf{X}^T\mathbf{X})^{-1}\right]_{jk} \left[\mathbf{X}^T\mathbf{y}\right]_k = \left[(\mathbf{X}^T\mathbf{X})^{-1}\right]_{jj} \left[\mathbf{X}^T \mathbf{y}\right]_{jj} \\
-      \Rightarrow~&\hat{\beta}_j = \frac{\left< \mathbf{x}_j,\mathbf{y}\right>}{\left< \mathbf{x}_j,\mathbf{x}_j\right>}
-      \end{align}$$
-    </p>
-  </blockquote>
-</div>
-]
-
-
----
-
-### Regression by Successive Orthogonalization
-
-In RSO algorithm, we can rewrite *Gram-Schmidt* part in matrix form.
-
---
-
-$$\small \begin{align}
-\mathbf{z}\_j &= \mathbf{x}\_j - \sum\_{k=0}^{j-1} \hat{\gamma}\_{kj} \mathbf{z}\_k \\\\
-\Rightarrow ~ \mathbf{x}\_j &= \sum\_{k=0}^{j-1} \hat{\gamma}\_{kj} \mathbf{z}\_k + \mathbf{z}\_j = \sum\_{k=0}^j \tilde{\gamma}\_{kj} z\_k\\\\
-\Rightarrow ~ \mathbf{X} &= \mathbf{Z}{\mathbf{\Gamma}}
-\end{align}$$
-
-where `\(\small \mathbf{Z}\)` has as columns the `\(\mathbf{z}_j\)`, and `\(\small \mathbf{\Gamma}\)` is the upper triangular matrix.
-
---
-
-Let introduce the diagonal matrix `\(\small \mathbf{D} = (D_{jj}) = \lVert \mathbf{z}_j\rVert \)`, then
-
---
-
-$$ \mathbf{X} = \mathbf{Z}\mathbf{D}^{-1}\mathbf{D}\mathbf{\Gamma} = \mathbf{Q}\mathbf{R} $$
-
-where `\(\small \mathbf{Q}\)` is an `\(\small N \times (p+1)\)` orthogonal matrix and `\(\small \mathbf{R}\)` is a `\(\small (p+1)\times(p+1)\)` upper triangular matrix.
-
---
-
-It is called **QR** decomposition.
-
----
-
-### OLS with QR decomposition
-
-.center[
-<div class="animated-border-quote">
-  <blockquote>
-    <p>
-      $$\small \begin{align}
-        \hat{\beta} &= (\mathbf{X}^T\mathbf{X})^{-1}\mathbf{X}^T\mathbf{y} \\
-        &= (\mathbf{R}^T\mathbf{Q}^T\mathbf{Q}\mathbf{R})^{-1} \mathbf{R}^T\mathbf{Q}^T \mathbf{y} \\
-        &= (\mathbf{R}^T\mathbf{R})^{-1} \mathbf{R}^T \mathbf{Q}^T \mathbf{y} \\
-      \Rightarrow ~ \mathbf{R}^T\mathbf{R}\hat{\beta} &= \mathbf{R}^T\mathbf{Q}^T \mathbf{y} \\
-      \therefore ~ \hat{\beta} &= \mathbf{R}^{-1}\mathbf{Q}^T\mathbf{y},\quad \hat{\mathbf{y}} = \mathbf{Q}\mathbf{Q}^T\mathbf{y}
-      \end{align}$$
-    </p>
-  </blockquote>
-</div>
-]
+[Axect's Github](https://github.com/Axect/ESL_Study/blob/master/chap3/python/08_pcr.py)
 
 ---
 
