@@ -18,8 +18,6 @@ def main():
     lasso = LassoReg(X, Y, 0.1)
     lasso.estimate()
 
-    print(lasso.y_hat)
-    
     plt.scatter(x, y)
     plt.plot(x, lasso.y_hat)
     plt.show()
@@ -191,7 +189,7 @@ def soft_threshold(rho, lam):
     else:
         return 0
 
-def coordinate_descent_lasso(beta, X, y, lam=0.01, num_iters=100, intercept=False):
+def coordinate_descent_lasso(beta, X, y, lam=0.01, num_iters=100):
     _, p = X.shape
 
     for _ in range(num_iters):
@@ -270,7 +268,7 @@ class RidgeReg(OLSEstimator):
     def test(self):
         self.N = self.Y.shape[0]
         self.p = self.X.shape[1]
-        (u, s, vt) = self.svd
+        (_, s, vt) = self.svd
         s_star = np.matrix(np.diag(s / (s ** 2 + self.lam)))
         
         self.nu = self.N - self.p + np.sum((self.lam / (s ** 2 + self.lam)) ** 2)
