@@ -9,105 +9,120 @@ import scipy.stats as ss
 def main():
     np.random.seed(42)
 
-    # Prepare Data to Plot
-    x = np.arange(1, 5, 0.1)
-    err = np.random.randn(len(x))
-    y = 2 * x + 3 + err
+    x = np.arange(0, np.pi, 0.1)
+    y = np.sin(x) + (x / 3)**2 + 0.1 * np.random.randn(len(x)) + 3
 
-    X = np.matrix(x).T
-    Xb = sm.add_constant(X)
+    X = np.matrix(np.column_stack([x**2, x**3, np.sin(x)]))
     Y = np.matrix(y).T
 
-    ols = OLSEstimator(Xb, Y)
-    ols.estimate()
-    ols.test()
-
-    ridge = RidgeReg(X, Y, 10)
-    ridge.estimate()
-    ridge.test()
-
-    lasso = LassoReg(X, Y, 1e-15)
+    lasso = LassoReg(X, Y, 0.1)
     lasso.estimate()
 
-    print("OLS: ")
-    ols.summary()
+    print(lasso.y_hat)
+    
+    plt.scatter(x, y)
+    plt.plot(x, lasso.y_hat)
+    plt.show()
 
-    print()
+    ## Prepare Data to Plot
+    #x = np.arange(1, 5, 0.1)
+    #err = np.random.randn(len(x))
+    #y = 2 * x + 3 + err
 
-    print("RIDGE: ")
-    ridge.summary()
+    #X = np.matrix(x).T
+    #Xb = sm.add_constant(X)
+    #Y = np.matrix(y).T
 
-    with plt.xkcd():
+    #ols = OLSEstimator(Xb, Y)
+    #ols.estimate()
+    #ols.test()
 
-        # Prepare Plot
-        plt.figure(figsize=(10,6), dpi=300)
-        plt.title(r"Simple OLS, Ridge & Lasso", fontsize=16)
-        plt.xlabel(r'x', fontsize=14)
-        plt.ylabel(r'y', fontsize=14)
+    #ridge = RidgeReg(X, Y, 10)
+    #ridge.estimate()
+    #ridge.test()
 
-        # Plot with Legends
-        plt.scatter(x, y, label='Data')
-        plt.plot(x, np.asarray(ols.y_hat).ravel(), 'r', label='OLS')
-        plt.plot(x, np.asarray(ridge.true_y_hat).ravel(), 'g', label='Ridge')
-        plt.plot(x, np.asarray(lasso.y_hat).ravel(), color='purple', alpha=0.5, label='Lasso')
+    #lasso = LassoReg(X, Y, 1e-15)
+    #lasso.estimate()
 
-        # Other options
-        plt.legend(fontsize=12)
-        plt.savefig("ols_ridge_lasso.png", dpi=300)
+    #print("OLS: ")
+    #ols.summary()
 
-    print()
+    #print()
 
-    # ==============================================================================
-    # Gaussian Basis
-    # ==============================================================================
-    x = np.arange(0, np.math.pi, 0.01)
-    err = np.random.randn(len(x))
-    y = np.sin(x) + (x / 3) ** 2 + 0.1 * err
+    #print("RIDGE: ")
+    #ridge.summary()
 
-    X = np.matrix(np.column_stack([phi(j/100, 0.01, x) for j in range(0, 310)]))
-    Xb = sm.add_constant(X)
-    Y = np.matrix(y).T
+    #with plt.xkcd():
 
-    ols = OLSEstimator(Xb, Y)
-    ols.estimate()
-    ols.test()
+    #    # Prepare Plot
+    #    plt.figure(figsize=(10,6), dpi=300)
+    #    plt.title(r"Simple OLS, Ridge & Lasso", fontsize=16)
+    #    plt.xlabel(r'x', fontsize=14)
+    #    plt.ylabel(r'y', fontsize=14)
 
-    #ridges = [RidgeReg(X, Y, 10**(lam/2)) for lam in range(0, 10)]
-    #for ridge in ridges:
-    #    ridge.estimate()
-    ridge = RidgeReg(X, Y, 10)
-    ridge.estimate()
-    ridge.test()
+    #    # Plot with Legends
+    #    plt.scatter(x, y, label='Data')
+    #    plt.plot(x, np.asarray(ols.y_hat).ravel(), 'r', label='OLS')
+    #    plt.plot(x, np.asarray(ridge.true_y_hat).ravel(), 'g', label='Ridge')
+    #    plt.plot(x, np.asarray(lasso.y_hat).ravel(), color='purple', alpha=0.5, label='Lasso')
 
-    lasso = LassoReg(X, Y, 0.01)
-    lasso.estimate()
+    #    # Other options
+    #    plt.legend(fontsize=12)
+    #    plt.savefig("ols_ridge_lasso.png", dpi=300)
 
-    ##print("OLS: ")
-    ##ols.summary()
+    #print()
 
-    ##print()
+    ## ==============================================================================
+    ## Gaussian Basis
+    ## ==============================================================================
+    #x = np.arange(0, np.math.pi, 0.01)
+    #err = np.random.randn(len(x))
+    #y = np.sin(x) + (x / 3) ** 2 + 0.1 * err
 
-    ##print("RIDGE: ")
-    ##ridge.summary()
+    #X = np.matrix(np.column_stack([phi(j/100, 0.01, x) for j in range(0, 310)]))
+    #Xb = sm.add_constant(X)
+    #Y = np.matrix(y).T
 
-    plt.rc('text', usetex=True)
-    plt.rc('font', family='serif')
-    # Prepare Plot
-    plt.figure(figsize=(10,6), dpi=300)
-    plt.title(r"Gaussian OLS, Ridge \& Lasso", fontsize=16)
-    plt.xlabel(r'$x$', fontsize=14)
-    plt.ylabel(r'$y$', fontsize=14)
+    #ols = OLSEstimator(Xb, Y)
+    #ols.estimate()
+    #ols.test()
 
-    # Plot with Legends
-    plt.scatter(x, y, color="blue", alpha=0.1, label=r'Data')
-    plt.plot(x, np.asarray(ols.y_hat).ravel(), color='r', alpha=0.7, label=r'OLS')
-    plt.plot(x, np.asarray(ridge.true_y_hat).ravel(), color='g', alpha=0.7, label=r'Ridge')
-    plt.plot(x, np.asarray(lasso.y_hat).ravel(), color='purple', alpha=0.7, label=r'Lasso')
+    ##ridges = [RidgeReg(X, Y, 10**(lam/2)) for lam in range(0, 10)]
+    ##for ridge in ridges:
+    ##    ridge.estimate()
+    #ridge = RidgeReg(X, Y, 10)
+    #ridge.estimate()
+    #ridge.test()
 
-    # Other options
-    plt.legend(fontsize=12)
+    #lasso = LassoReg(X, Y, 0.01)
+    #lasso.estimate()
 
-    plt.savefig("gaussian_ols_ridge_lasso.png", dpi=300)
+    ###print("OLS: ")
+    ###ols.summary()
+
+    ###print()
+
+    ###print("RIDGE: ")
+    ###ridge.summary()
+
+    #plt.rc('text', usetex=True)
+    #plt.rc('font', family='serif')
+    ## Prepare Plot
+    #plt.figure(figsize=(10,6), dpi=300)
+    #plt.title(r"Gaussian OLS, Ridge \& Lasso", fontsize=16)
+    #plt.xlabel(r'$x$', fontsize=14)
+    #plt.ylabel(r'$y$', fontsize=14)
+
+    ## Plot with Legends
+    #plt.scatter(x, y, color="blue", alpha=0.1, label=r'Data')
+    #plt.plot(x, np.asarray(ols.y_hat).ravel(), color='r', alpha=0.7, label=r'OLS')
+    #plt.plot(x, np.asarray(ridge.true_y_hat).ravel(), color='g', alpha=0.7, label=r'Ridge')
+    #plt.plot(x, np.asarray(lasso.y_hat).ravel(), color='purple', alpha=0.7, label=r'Lasso')
+
+    ## Other options
+    #plt.legend(fontsize=12)
+
+    #plt.savefig("gaussian_ols_ridge_lasso.png", dpi=300)
 
 
 
@@ -176,15 +191,15 @@ def soft_threshold(rho, lam):
     else:
         return 0
 
-def coordinate_descent_lasso(beta, X, y, lam=0.01, num_iters=100):
-    N, p = X.shape
+def coordinate_descent_lasso(beta, X, y, lam=0.01, num_iters=100, intercept=False):
+    _, p = X.shape
 
-    for i in range(num_iters):
+    for _ in range(num_iters):
         for j in range(p):
             y_hat = X * beta
             rho = X[:,j].T * (y - y_hat + beta[j,0] * X[:,j])
-
             beta[j] = soft_threshold(rho, lam)
+
     return beta
 
 # ==============================================================================
@@ -274,7 +289,8 @@ class RidgeReg(OLSEstimator):
 
 class LassoReg(OLSEstimator):
     def __init__(self, X, Y, lam):
-        self.X = X / np.linalg.norm(X, axis=0)
+        self.X = center(X)   # X should be centered because of beta_0
+        self.X = self.X / np.linalg.norm(self.X, axis=0)
         self.Y = center(Y)
         self.beta_0 = Y.mean(axis=0)
         self.lam = lam
