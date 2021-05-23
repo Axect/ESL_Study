@@ -195,8 +195,9 @@ To find `\(\small \hat{\beta}_j\)`, we need some iterations - called **Coordinat
 
 ### Summary of Lasso
 
-1. **Normalize** input via `\(\small L_2\)` norm:
-  $$\small \displaystyle z\_j = \sum\_{i=1}^N x\_{ij}^2 = 1 $$
+1. **Center** and **normalize** input via `\(\small L_2\)` norm:
+  $$\small \displaystyle \mathbf{X} ~\overset{\text{center}}{\longrightarrow}~ \mathbf{X}^c = (x^c\_{ij}) = (x_{ij} - \bar{x}_j) 
+  ~\overset{\text{normalize}}{\longrightarrow}~ \mathbf{X}^{c.n} = \frac{\mathbf{X}^c}{\lVert \mathbf{X}^c\rVert}$$
 
 2. **Center** response: 
   $$\mathbf{y}^c = \mathbf{y} - \bar{\mathbf{y}}$$
@@ -204,7 +205,7 @@ To find `\(\small \hat{\beta}_j\)`, we need some iterations - called **Coordinat
 3. Calculate `\(\small \hat{\beta_j}\)` via **Coordinate descent rule**.
 
 4. Calculate `\(\small\hat{\mathbf{y}}^c\)`:
-$$\small \hat{\mathbf{y}}^c = \frac{\mathbf{X}}{\lVert \mathbf{X} \rVert} \hat{\beta}$$
+$$\small \hat{\mathbf{y}}^c = \mathbf{X}^{c.n} \hat{\beta}$$
 
 5. Add intercept:
 $$\small \hat{\mathbf{y}} = \bar{\mathbf{y}} + \hat{\mathbf{y}}^c$$
