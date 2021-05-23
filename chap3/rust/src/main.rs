@@ -26,16 +26,16 @@ fn main() {
     let mut ridge = LinReg::new(&X, &y, Method::Ridge(1f64));
     ridge.estimate();
     ridge.stat_test();
+    println!("RIDGE: ");
+    ridge.beta().print();
 
-    //ols.summary();
     println!("");
 
-    //ridge.summary();
-
     // Lasso
-    let mut lasso = LinReg::new(&X, &y, Method::Lasso(0.1));
-    lasso.beta().print();
+    let mut lasso = LinReg::new(&X, &y, Method::Lasso(0.1f64));
     lasso.estimate();
+    println!("LASSO: ");
+    lasso.beta().print();
 
     let mut df = DataFrame::new(vec![]);
     df.push("x", Series::new(x));
@@ -118,7 +118,6 @@ fn coordinate_descent_lasso(beta_init: &Vec<f64>, X: &Matrix, y: &Vec<f64>, lam:
                     .map(|(a, b, c)| a - b + c * beta[j])
                     .collect::<Vec<f64>>()
             );
-            //let rho = x_j.dot(&(y.sub_v(&y_hat).add_v(&x_j.mul_s(beta[j]))));
             beta[j] = soft_threshold(rho, lam);
         }
     }
@@ -146,6 +145,7 @@ pub struct LinReg {
     N: usize,
     p: usize,
     beta: Option<Vec<f64>>,
+    beta_0: Option<f64>,
     y_hat: Option<Vec<f64>>,
     sigma_hat: Option<f64>,
     t_score: Option<Vec<f64>>,
@@ -163,19 +163,17 @@ pub enum Method {
 
 impl LinReg {
     pub fn new(x: &Matrix, y: &Vec<f64>, method: Method) -> Self {
-        let (x_mat, y_vec, beta) = match method {
+        let (x_mat, y_vec, beta, beta_0) = match method {
             Method::OLS => {
-                (add_bias(x.clone()), y.clone(), None)
+                (add_bias(x.clone()), y.clone(), None, None)
             }
             Method::Ridge(_) => {
-                (x.standardize(), y.centered(), None)
+                (x.standardize(), y.centered(), None, Some(y.mean()))
             }
             Method::Lasso(_) => {
-                println!("Hi");
-                (x.normalized(), y.centered(), Some(vec![1f64; x.col]))
+                (x.centered().normalized(), y.centered(), Some(vec![1f64; x.col]), Some(y.mean()))
             }
         };
-        println!("Normalized Success");
         
         Self {
             input: x_mat,
@@ -183,6 +181,7 @@ impl LinReg {
             N: y.len(),
             p: x.col,
             beta,
+            beta_0,
             y_hat: None,
             sigma_hat: None,
             t_score: None,
@@ -204,6 +203,13 @@ impl LinReg {
         match &self.beta {
             None => panic!("Not yet estimated!"),
             Some(beta) => beta,
+        }
+    }
+
+    pub fn beta_0(&self) -> &f64 {
+        match &self.beta_0 {
+            None => panic!("Not inserted!"),
+            Some(beta_0) => beta_0,
         }
     }
 
@@ -278,7 +284,7 @@ impl LinReg {
             }
             Method::Lasso(lam) => {
                 let beta_hat = coordinate_descent_lasso(self.beta(), self.input(), self.output(), lam, 200);
-                let y_hat = (self.input() * &beta_hat).add_s(self.output().mean());
+                let y_hat = (self.input() * &beta_hat).add_s(*self.beta_0());
 
                 self.beta = Some(beta_hat);
                 self.y_hat = Some(y_hat);

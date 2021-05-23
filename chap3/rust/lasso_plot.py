@@ -24,10 +24,10 @@ y_ridge = var['y_ridge'][:]
 y_lasso = var['y_lasso'][:]
 
 # Plot with Legends
-plt.scatter(x, y, label=r'Data')
-plt.plot(x, y_ols, 'r', label=r'OLS')
-plt.plot(x, y_ridge, 'g', label=r'Ridge')
-plt.plot(x, y_lasso, color='purple', label=r'Lasso', alpha=0.5)
+plt.scatter(x, y, label=r'Data', alpha=0.2)
+plt.plot(x, y_ols, 'r', label=r'OLS', alpha=0.7)
+plt.plot(x, y_ridge, 'g', label=r'Ridge', alpha=0.7)
+plt.plot(x, y_lasso, color='purple', label=r'Lasso', alpha=0.7)
 
 # Other options
 plt.legend(fontsize=12)
