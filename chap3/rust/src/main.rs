@@ -32,7 +32,7 @@ fn main() {
     println!("");
 
     // Lasso
-    let mut lasso = LinReg::new(&X, &y, Method::Lasso(0.1f64));
+    let mut lasso = LinReg::new(&X, &y, Method::Lasso(1f64));
     lasso.estimate();
     println!("LASSO: ");
     lasso.beta().print();
