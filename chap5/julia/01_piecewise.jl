@@ -8,14 +8,14 @@ end
 function piecewise_constant(data::U, interval::V) where { T <: Number, U <: AbstractMatrix{T}, V <: AbstractVector{T} }
     beta = zeros(T, length(interval)+1);
     prev_node = interval[1];
-    beta[1] = mean(data[data[:,1] .< prev_node, :]);
+    beta[1] = mean(data[data[:,1] .< prev_node, 2]);
     for i in 2:length(interval)
         curr_node = interval[i];
-        node_data = data[(data[:,1] .>= prev_node) .& (data[:,1] .< curr_node), :];
+        node_data = data[(data[:,1] .>= prev_node) .& (data[:,1] .< curr_node), 2];
         beta[i] = mean(node_data);
         prev_node = interval[i];
     end
-    beta[end] = mean(data[data[:,1] .>= prev_node, :]);
+    beta[end] = mean(data[data[:,1] .>= prev_node, 2]);
 
     return function(x::T)
         idx = 1;
