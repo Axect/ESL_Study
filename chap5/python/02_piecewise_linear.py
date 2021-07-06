@@ -43,7 +43,7 @@ def piecewise_linear(data, nodes):
     
     for i in range(1, len(nodes)):
         curr_node = nodes[i]
-        node_data = data[np.logical_and(data[:,1] >= prev_node, data[:,1] < curr_node), :]
+        node_data = data[(data[:,1] >= prev_node) & (data[:,1] < curr_node), :]
         beta[i,:] = find_beta(node_data)
         prev_node = curr_node
     

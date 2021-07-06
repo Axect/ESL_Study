@@ -38,14 +38,13 @@ def piecewise_constant(data, nodes):
     
     for i in range(1, len(nodes)):
         curr_node = nodes[i]
-        node_data = data[np.logical_and(data[:,0] >= prev_node, data[:,0] < curr_node), 1]
+        node_data = data[(data[:,0] >= prev_node) & (data[:,0] < curr_node), 1]
         beta[i] = np.mean(node_data)
         prev_node = curr_node
     
     beta[-1] = np.mean(data[data[:,0] >= prev_node, 1])
 
     def pc(x):
-        idx = 0
         if x < nodes[0]:
             return beta[0]
         

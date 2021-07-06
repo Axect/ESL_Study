@@ -11,16 +11,16 @@ def main():
 
     nodes = np.arange(0, 10, 1)
 
-    # features = gen_features(X[:,0], nodes)
-    # print(features.shape)
+    features = gen_features(X[:,0], nodes)
+    print(features.shape)
 
-    # beta = find_beta(features, X[:,1])
-    # print(beta.shape)
+    beta = find_beta(features, X[:,1])
+    print(beta.shape)
 
-    # new_x = gen_features(np.array([x[0]]), nodes)
-    # print(new_x.shape)
+    new_x = gen_features(np.array([x[0]]), nodes)
+    print(new_x.shape)
 
-    # print(new_x @ beta)
+    print(new_x @ beta)
 
     cpl = continuous_piecewise_linear(X, nodes)
 
@@ -49,6 +49,9 @@ def find_beta(features, response):
 
 def relu(x, xi):
     return np.maximum(x-xi, 0)
+
+def rss(y, y_hat):
+    return np.sum((y - y_hat)**2)
 
 def gen_features(x, nodes):
     X = sm.add_constant(x)
