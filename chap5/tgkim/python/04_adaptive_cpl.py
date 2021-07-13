@@ -30,7 +30,8 @@ def main():
 
     cpl = continuous_piecewise_linear(X, nodes)
 
-    ad_cpl, final_nodes = adaptive_cpl(X, nodes, (0, 10))
+    ad_cpl, final_nodes = adaptive_cpl(X, nodes, (0, 10), eps=0.5)
+    print(final_nodes)
 
     # ==========================================================================
     # Plot
@@ -46,12 +47,12 @@ def main():
     
     # Draw Plot ...
     plt.scatter(x, y, alpha=0.2, label="data")
-    plt.plot(x, ad_cpl(x), color='r', label="Adaptive CPL")
+    plt.plot(x, ad_cpl(x), color='r', label=r"Adaptive CPL ($\epsilon=5e-1$)")
     
     # Plot with Legends
     plt.legend(fontsize=12)
     plt.grid()
-    plt.savefig('adaptive_cpl.png')
+    plt.savefig('adaptive_cpl_5e-1.png')
 
 def find_beta(features, response):
     X = features
@@ -94,7 +95,7 @@ def split_data(data, nodes):
         result.append(data[(data[:,0] >= a) & (data[:,0] < b), :])
     return result
 
-def adaptive_cpl(data, init_nodes, interval):
+def adaptive_cpl(data, init_nodes, interval, eps=None):
     cpl = continuous_piecewise_linear(data, init_nodes)
 
     nodes = np.empty((len(init_nodes)+1, 2))
@@ -111,6 +112,9 @@ def adaptive_cpl(data, init_nodes, interval):
         rss_vec[i] = rss(cpl(spd[:,0]), spd[:,1])
     
     mean_rss = np.mean(rss_vec)
+
+    if eps is not None:
+        mean_rss = eps
     
     idx = np.where(rss_vec[:] > mean_rss)[0]
     
