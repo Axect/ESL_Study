@@ -15,11 +15,13 @@ def main():
     f = gen_knn_average(data, k)
     f = np.vectorize(f)
 
-    g = gen_nadaraya_watson(data, k, 0.2)
+    g = gen_nadaraya_watson(data, epanechnikov_quadratic_kernel, 0.2)
+    h = gen_nadaraya_watson(data, tri_cube, 0.2)
 
     domain = np.linspace(0, 1, 100)
     knn_image = f(domain)
-    nw_image = np.array([g(x0) for x0 in domain])
+    eq_image = np.array([g(x0) for x0 in domain])
+    tc_image = np.array([h(x0) for x0 in domain])
 
     # ==========================================================================
     # Figure
@@ -35,8 +37,10 @@ def main():
     
     # Draw Plot ...
     plt.scatter(x, y, alpha=0.2, label="Data")
-    plt.plot(domain, knn_image, color = "r", label="KNN")
-    plt.plot(domain, nw_image, color="g", label="Nadaraya-Watson")
+    plt.plot(domain, np.sin(4*domain), alpha=0.8, label="original")
+    plt.plot(domain, knn_image, alpha=0.8, label="KNN")
+    plt.plot(domain, eq_image, alpha=0.8, label="Epanechnikov quadratic")
+    plt.plot(domain, tc_image, alpha=0.8, label="Tri-cube")
     
     # Plot with Legends
     plt.legend(fontsize=12)
@@ -59,16 +63,23 @@ def gen_knn_average(data, k):
     return knn_average
 
 def epanechnikov_quadratic_kernel(lam, x0, x):
-    d = np.fabs(x0 - x)
-    if d < lam:
-        return 0.75 * (1 - (d/lam)**2)
+    t = np.fabs(x0 - x) / lam
+    if t <= 1:
+        return 0.75 * (1 - t**2)
     else:
         return 0
 
-def gen_nadaraya_watson(data, k, lam):
+def tri_cube(lam, x0, x):
+    t = np.fabs(x0 - x) / lam
+    if t <= 1:
+        return (1-t**3)**3
+    else:
+        return 0
+
+def gen_nadaraya_watson(data, kernel, lam):
     def nadaraya_watson(x):
         def evaluation_kernel(x_i):
-            return epanechnikov_quadratic_kernel(lam, x, x_i)
+            return kernel(lam, x, x_i)
 
         denominator = np.sum([evaluation_kernel(x_i) for x_i in data[:,0]])
         numerator = np.sum([evaluation_kernel(x_i) * y_i for (x_i, y_i) in data])
