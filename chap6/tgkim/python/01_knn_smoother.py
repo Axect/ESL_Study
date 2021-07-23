@@ -45,7 +45,7 @@ def main():
     # Plot with Legends
     plt.legend(fontsize=12)
     plt.grid()
-    plt.savefig('01_knn.png')
+    plt.savefig('01_knn_smoother.png')
 
 def knn(arr, x, k):
     dist = np.fabs(arr - x)

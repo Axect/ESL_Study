@@ -1,0 +1,351 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>06 Kernel Part 1</title>
+    <meta charset="utf-8">
+    <link rel="stylesheet" type="text/css" href="socialst.css">
+    <link rel="stylesheet" type="text/css" href="additional.css">
+  </head>
+  <body>
+    <textarea id="source">
+
+
+layout: true
+<div class="my-header">
+  <p class="align_left"><img src="images/yonsei_logo.png" style="height: 30px;"/></p>
+  <p class="align_right"><b>Kernel Smoothing Method</b></p>
+</div>
+<div class="my-footer">
+  <p class="align_right"><b>2021.07.16 ML Study</b></p>
+  <p class="align_left"><b>Tae Geun Kim</b></p>
+</div>
+
+---
+
+class: center, middle
+
+# Kernel Smoothing Method
+
+<h4 style="color:brown">Part 1 : RKHS and KNN smoother</h4>
+
+<h3 style="color: darkblue">Tae Geun Kim</h3>
+
+---
+
+## Table of Contents
+
+--
+
+* What is the Kernel?
+
+--
+
+* Reproducing Kernel Hilbert Space
+
+--
+
+* KNN Smoother
+
+---
+
+class: center, middle
+
+# What is the Kernel?
+
+---
+
+### Start with Integral Transform
+
+An integral transform is any transform `\(\small T\)` of the following form:
+
+$$(Tf)(x) = \int_{t_1}^{t_2} f(t) K(t, x) dt$$
+
+--
+
+* `\(\small K: \mathbb{R} \times \mathbb{R} \rightarrow \mathbb{R}\)` is called the kernel function or integral kernel.
+
+--
+
+We already know some famous kernels.
+
+1. Identity : `\(\small K(t, x) = \delta(t - x)\)`
+
+2. Path Integral : `\(\small \displaystyle \left(i\hbar \frac{\partial}{\partial t} - H \right) K(x,t;x_i,t_i) = i\hbar \delta(x-x_i)\delta(t-t_i)\)`
+
+3. Green function : `\(\small L [G(x, t)] = \delta(x-t)\)`
+
+---
+
+### Start with Integral Transform
+
+If `\(\small f,\,K(\cdot, x) \in L^2(\mathbb{R})\)` then, we can rewrite integral transform as follows.
+
+$$ (Tf)(x) = \int f(t) K(t,x) dt = \langle f, K(\cdot, x) \rangle_{L^2} $$
+
+--
+
+We want to find **Reproducing Kernel** `\(\small K\)` such that
+
+$$ f(x) = \langle f,\, K(\cdot, x) \rangle_{L^2} $$
+
+--
+
+In this case, we already know the Reproducing Kernel.
+
+$$ K(t,x) = \delta(t - x) $$
+
+But `\(\small \delta(x)\)` is not measurable, so it is not in `\(\small L^2(\mathbb{R})\)`.
+
+Thus, let's introduce **Reproducing Kernel Hilbert Space (RKHS)**.
+
+---
+
+class: center, middle
+
+# Reproducing Kernel Hilbert Space
+
+---
+
+### RKHS
+
+The definition of **RKHS** is as follows.
+
+<div class="animated-border-quote">
+  <blockquote>
+    <p>
+      Let $\small X$ be a set, $\small \mathcal{H}$ be a Hilbert space on $\small X$. $\small \mathcal{H}$ is called RKHS on $\small X$ if the evaluation functional $\small E_x: \mathcal{H} \rightarrow \mathbb{R}$ defined by $\small E_x(f) = f(x)$, is bounded $\small \forall x \in X$.
+    </p>
+  </blockquote>
+</div>
+
+--
+
+From the definition, we can derive some properties of `\(\small E_x\)`
+
+1. **Linearity** : `\(\small E_x(f+\alpha g) = (f+\alpha g)(x) = f(x) + \alpha g(x) = E_x(f) + \alpha E_x(g)\)`
+
+2. **Continuous** : Bounded linear operator between two normed vector spaces is continuous.  
+> `\(\small \lVert E_x \rVert_{\mathcal{H}} = \text{sup}\{ \lVert E_x (y) \rVert : \lVert y \rVert < 1 \} \)` is bounded `\(\small \Longleftrightarrow\)`  
+> `\(\small \exists M < \infty\)` s.t. `\(\small \lVert E_x (y) \rVert \leq M \lVert y \rVert \Rightarrow \lVert E_x(y_1 - y_2) \rVert \leq M\lVert y_1 - y_2\rVert\)` 
+
+---
+
+### RKHS
+
+We use an important theorem in Hilbert space - **Riesz Representation Theorem**.
+
+<div class="animated-border-quote">
+  <blockquote>
+    <p>
+      Let $\small \mathcal{H}$ be a Hilbert space and $\small \mathcal{H}^*$ be its dual space.
+      For every continuous linear functional $\small \varphi \in \mathcal{H}^*$, $\small \exists! f_\varphi \in \mathcal{H}$ s.t.
+      $$\varphi(g) = \langle f_\varphi, g\rangle_\mathcal{H} \quad \forall g \in \mathcal{H}$$
+    </p>
+  </blockquote>
+</div>
+
+--
+
+Since we proved that continuity of `\(\small E_x \in \mathcal{H}^*\)`, `\(\small \exists! K_x \in \mathcal{H}\)` s.t.
+$$\small E\_x(f) = f(x) = \langle K\_x , \, f\rangle\_\mathcal{H}$$
+
+And since `\(\small K_x\)` also belongs to `\(\small \mathcal{H}\)`,
+$$\small E\_y(K\_x) = K\_x(y) = \langle K\_y, \,K\_x\rangle\_\mathcal{H}$$
+
+---
+
+### RKHS
+
+Now, define `\(\small K: X \times X \rightarrow \mathbb{R}\)` such that 
+$$\small K(x,y) \equiv K\_x(y) = K\_y(x) = \langle K\_x, \,K\_y\rangle\_\mathcal{H}$$
+
+--
+
+Then for all `\(\small f \in \mathcal{H}\)`, there exists `\(\small K\)` such that
+$$f(x) = \langle f, \,K\_x\rangle\_\mathcal{H} = \langle f, \, K(\cdot,x)\rangle\_\mathcal{H}$$
+
+`\(\small K\)` is called **Reproducing Kernel**.
+
+-----
+
+--
+
+**Notation**
+
+* `\(\small \mathcal{H}_K\)` : RKHS equipped with `\(\small K\)` as Reproducing Kernel.
+
+* `\(\small K(\cdot, x) : X \rightarrow \mathbb{R}\)` defined as `\(\small K(y,x) = K_x(y)\)`
+
+* `\(\small \langle \cdot, \cdot \rangle_{K} \equiv  \langle \cdot, \cdot \rangle_{\mathcal{H}_K}\)`
+
+---
+
+### Property of RKHS
+
+**1.** `\(\small K\)` is positive definite.
+
+--
+
+.center[
+<div class="animated-border-quote">
+  <blockquote>
+    <p>
+      $$\small \sum_{i,j} c_i c_j K(x_i, x_j) = \sum_{i,j} c_i c_j \langle K_{x_i},\,K_{x_j}\rangle_{K} = \langle \sum_i c_i K_{x_i},\sum_j c_j K_{x_j}\rangle = \lVert \sum_{i=1}c_i K_{x_i}\rVert^2_K $$
+    </p>
+  </blockquote>
+</div>
+]
+
+--
+
+**2.** The span of the set `\(\small \{ K_x | x \in X \}\)` is dense in `\(\small \mathcal{H}_K\)`.
+
+.center[
+<div class="animated-border-quote">
+  <blockquote>
+    <p>
+      Let $\small H_0 = \text{span} \{ K_x | x \in X \}$. Then we define an inner product $\langle\,,\,\rangle_{H_0}$ as
+      $$\small \langle f, g\rangle_{H_0} = \sum \alpha_i \beta_j K(x_i,t_j) \quad \text{for} \quad f=\sum_i \alpha_i K_{x_i},~g=\sum_j \beta_j K_{x_j}  $$
+      (Continued)
+    </p>
+  </blockquote>
+</div>
+]
+
+---
+
+### Properties of RKHS
+
+.center[
+<img src="images/photo_2021-07-16_11-55-32.jpg" alt="" style="width:85%">
+]
+
+---
+
+### Properties of RKHS
+
+.center[
+<img src="images/photo_2021-07-16_11-58-36.jpg" alt="" style="width:85%">
+]
+
+---
+
+### 5.8.1 Model as span of Kernel
+
+.center[
+  <img src="images/photo_2021-07-16_12-01-30.jpg" alt="" style="width:100%">
+]
+
+---
+
+### 5.8.1 Representer thm
+
+.center[
+  <img src="images/photo_2021-07-16_12-03-38.jpg" alt="" style="width:85%">
+  <img src="images/photo_2021-07-16_12-05-06.jpg" alt="" style="width:89%">
+]
+
+---
+
+### 5.8.1 Proof of Representer thm
+
+.center[
+  <img src="images/photo_2021-07-16_12-07-09.jpg" alt="" style="width:100%">
+]
+
+---
+
+### 5.8.1 Consequence of Representer thm
+
+.center[
+  <img src="images/photo_2021-07-16_12-10-45.jpg" alt="" style="width:100%">
+]
+
+---
+
+### 5.8.2 Examples of RKHS
+
+.center[
+  <img src="images/photo_2021-07-16_12-13-52.jpg" alt="" style="width:100%">
+]
+
+---
+
+class: middle, center
+
+# kNN Smoother
+
+---
+
+### 6.1 1D Kernel Smoothers
+
+First, we use `\(\small k\)`-nearest-neighbor average to regress function :
+$$\small \hat{f}(x) = \text{Ave}(y\_i | x\_i \in N\_k(x))$$
+
+--
+
+But the average leads to a discontinuity which is ugly and unnecessary.
+
+--
+
+Rather than give all the points in the neighborhood equal weight, we can assign weights that die off smoothly with distance from the target point.
+
+--
+
+For this, we use **Nadaraya-Watson kernel-weighted average**
+
+$$\small \hat{f}(x) = \frac{\sum\_{i=1}^N K\_\lambda (x, x\_i) y\_i}{\sum\_{i=1}^N K\_\lambda(x,x\_i)}$$
+
+.center[
+  <img src="images/Screenshot_2021-07-16_12-22-24.png" alt="" style="width:80%">
+]
+
+---
+
+### References
+
+* T. Hastie et al., *The Elements of Statistical Learning 2nd ed*, Springer (2009)
+* F. Cucker et al., *Learning Theory: An Approximation Theory Viewpoint*, Cambridge (2007) 
+* D. Sejdinovic et al., *What is an RKHS?*, March 11, 2014
+* F. Luef, *HILBERT SPACES*
+* Febian et al., *Functional Analysis and Infinite-Dimensional Geometry*, Springer (2001)
+
+---
+
+class: center, middle
+
+# Thank you!
+
+
+    </textarea>
+    <!-- <script src="https://remarkjs.com/downloads/remark-latest.min.js"></script> -->
+    <script src="./remark-latest.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-AMS_HTML&delayStartupUntil=configured" type="text/javascript"></script>
+    <!-- <script src="./MathJax.js" type="text/javascript"></script> -->
+    <script>
+      var slideshow = remark.create({
+          ratio: '4:3',
+
+          highlightLanguage: 'rust',
+          highlightStyle: 'monokai',
+          highlightLines: 'true',
+          highlightSpans: 'true'
+      });
+
+      // Setup MathJax
+      MathJax.Hub.Config({
+          tex2jax: {
+          inlineMath: [['$','$'], ['\\(','\\)']],
+          skipTags: ['script', 'noscript', 'style', 'textarea', 'pre']
+          }
+      });
+      MathJax.Hub.Queue(function() {
+          $(MathJax.Hub.getAllJax()).map(function(index, elem) {
+              return(elem.SourceElement());
+          }).parent().addClass('has-jax');
+      });
+
+      MathJax.Hub.Configured();
+    </script>
+  </body>
+</html>
