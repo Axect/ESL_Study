@@ -205,7 +205,7 @@ $$f(x) = \langle f, \,K\_x\rangle\_\mathcal{H} = \langle f, \, K(\cdot,x)\rangle
   <blockquote>
     <p>
       Let $\small H_0 = \text{span} \{ K_x | x \in X \}$. Then we define an inner product $\langle\,,\,\rangle_{H_0}$ as
-      $$\small \langle f, g\rangle_{H_0} = \sum \alpha_i \beta_j K(x_i,t_j) \quad \text{for} \quad f=\sum_i \alpha_i K_{x_i},~g=\sum_j \beta_j K_{x_j}  $$
+      $$\small \langle f, g\rangle_{H_0} = \sum \alpha_i \beta_j K(x_i,t_j) \quad \text{for} \quad f=\sum_i \alpha_i K_{x_i},~g=\sum_j \beta_j K_{t_j}  $$
       (Continued)
     </p>
   </blockquote>
@@ -232,9 +232,28 @@ $$f(x) = \langle f, \,K\_x\rangle\_\mathcal{H} = \langle f, \, K(\cdot,x)\rangle
 
 ### 5.8.1 Model as span of Kernel
 
-.center[
-  <img src="images/photo_2021-07-16_12-01-30.jpg" alt="" style="width:100%">
-]
+* We can write for any `\(\small \displaystyle f \in \mathcal{H}_K,~~ f(x) = \sum_m \alpha_m K(x, y_m)\)`
+
+--
+
+* Sps `\(\small K\)` has an eigen-expansion :  
+  $$\small K(x,y) = \sum\_{i=1}^\infty \gamma\_i \phi\_i(x) \phi\_i(y) \quad \text{with} \quad \gamma_i \geq 0,~~\sum \gamma_i^2 < \infty$$
+
+--
+
+  Then we can re-write `\(\small f\)` as :
+
+  $$\small f(x) = \sum\_{i=1}^\infty c\_i \phi\_i(x) \quad \text{where} \quad c\_i = \gamma\_i \sum\_m \alpha\_m \phi\_i(y_m)$$
+
+--
+
+* Then the norm `\(\small \lVert f \rVert_{K}\)` is as follow.
+
+  $$\small
+  \begin{aligned}
+  \langle f, f \rangle\_K &= \sum\_m \sum\_n \alpha\_m \alpha\_n K(y\_m, y\_n) = \sum\_{i=1}^\infty \gamma\_i \sum\_m \alpha\_m\phi\_i(y\_m) \sum\_n \alpha\_n \phi\_i(y\_n) \\\\
+  &= \sum\_{i=1}^\infty \frac{c\_i^2}{\gamma\_i} < \infty \qquad (\text{since }\mathcal{H}_K\text{ is Hilbert space.})
+  \end{aligned}$$
 
 ---
 
