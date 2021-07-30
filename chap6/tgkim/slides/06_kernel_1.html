@@ -13,10 +13,10 @@
 layout: true
 <div class="my-header">
   <p class="align_left"><img src="images/yonsei_logo.png" style="height: 30px;"/></p>
-  <p class="align_right"><b>Kernel Smoothing Method</b></p>
+  <p class="align_right"><b>RKHS and kNN smoother</b></p>
 </div>
 <div class="my-footer">
-  <p class="align_right"><b>2021.07.16 ML Study</b></p>
+  <p class="align_right"><b>2021.07.30 ML Study</b></p>
   <p class="align_left"><b>Tae Geun Kim</b></p>
 </div>
 
@@ -26,7 +26,7 @@ class: center, middle
 
 # Kernel Smoothing Method
 
-<h4 style="color:brown">Part 1 : RKHS and KNN smoother</h4>
+<h4 style="color:brown">Part 1 : RKHS and kNN smoother</h4>
 
 <h3 style="color: darkblue">Tae Geun Kim</h3>
 
@@ -44,7 +44,7 @@ class: center, middle
 
 --
 
-* KNN Smoother
+* kNN Smoother
 
 ---
 
@@ -113,7 +113,7 @@ The definition of **RKHS** is as follows.
 <div class="animated-border-quote">
   <blockquote>
     <p>
-      Let $\small X$ be a set, $\small \mathcal{H}$ be a Hilbert space on $\small X$. $\small \mathcal{H}$ is called RKHS on $\small X$ if the evaluation functional $\small E_x: \mathcal{H} \rightarrow \mathbb{R}$ defined by $\small E_x(f) = f(x)$, is bounded $\small \forall x \in X$.
+      Let $\small \chi$ be a set, $\small \mathcal{H}$ be a Hilbert space on $\small \chi$. $\small \mathcal{H}$ is called RKHS on $\small \chi$ if the evaluation functional $\small E_x: \mathcal{H} \rightarrow \mathbb{R}$ defined by $\small E_x(f) = f(x)$, is bounded $\small \forall x \in \chi$.
     </p>
   </blockquote>
 </div>
@@ -156,13 +156,13 @@ $$\small E\_y(K\_x) = K\_x(y) = \langle K\_y, \,K\_x\rangle\_\mathcal{H}$$
 
 ### RKHS
 
-Now, define `\(\small K: X \times X \rightarrow \mathbb{R}\)` such that 
+Now, define `\(\small K: \chi \times \chi \rightarrow \mathbb{R}\)` such that 
 $$\small K(x,y) \equiv K\_x(y) = K\_y(x) = \langle K\_x, \,K\_y\rangle\_\mathcal{H}$$
 
 --
 
 Then for all `\(\small f \in \mathcal{H}\)`, there exists `\(\small K\)` such that
-$$f(x) = \langle f, \,K\_x\rangle\_\mathcal{H} = \langle f, \, K(\cdot,x)\rangle\_\mathcal{H}$$
+$$\small f(x) = \langle f, \,K\_x\rangle\_\mathcal{H} = \langle f, \, K(\cdot,x)\rangle\_\mathcal{H}$$
 
 `\(\small K\)` is called **Reproducing Kernel**.
 
@@ -174,15 +174,61 @@ $$f(x) = \langle f, \,K\_x\rangle\_\mathcal{H} = \langle f, \, K(\cdot,x)\rangle
 
 * `\(\small \mathcal{H}_K\)` : RKHS equipped with `\(\small K\)` as Reproducing Kernel.
 
-* `\(\small K(\cdot, x) : X \rightarrow \mathbb{R}\)` defined as `\(\small K(y,x) = K_x(y)\)`
+* `\(\small K(\cdot, x) : \chi \rightarrow \mathbb{R}\)` defined as `\(\small K(y,x) = K_x(y)\)`
 
 * `\(\small \langle \cdot, \cdot \rangle_{K} \equiv  \langle \cdot, \cdot \rangle_{\mathcal{H}_K}\)`
+
+* The map `\(\small \phi : \chi \rightarrow \mathcal{H}_K\)` s.t. `\(\small \phi(x) \equiv K(\cdot, x)\)` is called feature map.
+
+---
+
+### Kernel Trick
+
+We can write the inner product of feature maps as kernel evaluation.
+
+$$\small \langle \phi(x), \phi(y) \rangle\_K = K(x, y)$$
+
+It means, we can perform inner product in `\(\small \mathcal{H}_K\)` in a very efficient way;
+via a function evaluation performed in the original low-dimensional space.
+
+--
+
+This property is also known as the **kernel trick**, and it facilitates significantly the computations.
+
+.center[
+  <img src="images/Screenshot_2021-07-30_10-00-51.png" alt="" style="width:50%">
+]
+
+---
+
+### Kernel Trick
+
+In practice, we use the kernel trick as the following steps.
+
+--
+
+1. Map (implicitly) the input training data to an RKHS.
+$$\small x_i \rightarrow \phi(x_i) \in \mathcal{H}\_K,\quad n = 1,2,\cdots,N$$
+
+--
+
+2. Solve a linear estimation task in `\(\small \mathcal{H}_K\)`, involving the images `\(\small \phi(x_i)\)`.
+
+--
+
+3. Cast the algorithm that solves for the unknown parameters in terms of inner product operations.
+$$\small \langle \phi(x\_i), \phi(x\_j) \rangle,\quad i,j = 1,2,\cdots,N.$$
+
+--
+
+4. Replace each inner product by a kernel evaluation.
+$$\small \langle \phi(x\_i), \phi(x\_j) \rangle = K(x\_i, x\_j)$$
 
 ---
 
 ### Property of RKHS
 
-**1.** `\(\small K\)` is positive definite.
+**1.** `\(\small K\)` is positive semi-definite.
 
 --
 
@@ -228,6 +274,14 @@ $$f(x) = \langle f, \,K\_x\rangle\_\mathcal{H} = \langle f, \, K(\cdot,x)\rangle
 <img src="images/photo_2021-07-16_11-58-36.jpg" alt="" style="width:85%">
 ]
 
+<br/>
+
+It shows that `\(\small \mathcal{H}_K\)` can be constructed by all possible
+linear combinations of the kernel function computed in `\(\small \chi\)`, as well as the limit points
+of sequences of such combinations.
+
+`\(\small \Rightarrow\)` `\(\small \mathcal{H}_K\)` can be fully generated from the knowledge of `\(\small K(\cdot,\cdot)\)`
+
 ---
 
 ### 5.8.1 Model as span of Kernel
@@ -259,10 +313,21 @@ $$f(x) = \langle f, \,K\_x\rangle\_\mathcal{H} = \langle f, \, K(\cdot,x)\rangle
 
 ### 5.8.1 Representer thm
 
-.center[
-  <img src="images/photo_2021-07-16_12-03-38.jpg" alt="" style="width:85%">
-  <img src="images/photo_2021-07-16_12-05-06.jpg" alt="" style="width:89%">
-]
+Then we can rewrite a general form of regularization problems as follows.
+
+$$\begin{aligned}
+&\underset{f \in \mathcal{H}\_K}{\text{min}} \left[ \sum\_{i=1}^N L(y\_i,\,f(x\_i)) + \lambda \lVert f \rVert\_{K}^2\right] \\\\
+\\\\
+\Rightarrow ~&\underset{\left\\{ c\_j \right\\}\_{j=1}^\infty}{\text{min}}  \left[ \sum\_{i=1}^N L(y\_i,\, \sum\_{j=1}^\infty c\_j \phi\_j(x\_i) ) + \lambda \sum\_{j=1}^\infty \frac{c\_j^2}{\gamma_j} \right]
+\end{aligned}$$
+
+--
+
+Surprisingly, the solution has finite-dimensional form.
+
+$$f(x) = \sum\_{i=1}^N \alpha\_i K(x, x\_i)$$
+
+It is called the **Representer theorem**.
 
 ---
 
@@ -274,19 +339,54 @@ $$f(x) = \langle f, \,K\_x\rangle\_\mathcal{H} = \langle f, \, K(\cdot,x)\rangle
 
 ---
 
-### 5.8.1 Consequence of Representer thm
+### 5.8.1 Consequence of Representer Thm
 
-.center[
-  <img src="images/photo_2021-07-16_12-10-45.jpg" alt="" style="width:100%">
-]
+Since the solution has finite form, so does `\(\small J(f)\)` :
+$$J(f) = \lVert f \rVert\_K^2 = \sum\_{i,j}^N \alpha\_i \alpha\_j K(x\_i, x\_j)$$
+
+--
+
+Then we can re-write regularization problems as Vector notation :  
+
+
+$$\underset{\mathbf{\alpha}}{\text{min}} \left[ \mathcal{L}(\mathbf{y}, \mathbf{K\alpha}) + \lambda \mathbf{\alpha}^T \mathbf{K\alpha} \right]$$
+
+* `\(\mathbf{K}\)` is called a **Gram matrix**.
+
+--
+
+Thus, we can reduce infinite dimensional problem to finite dimensional optimization problem.
+It is called *Kernel property* in the literature on SVM.
 
 ---
 
 ### 5.8.2 Examples of RKHS
 
-.center[
-  <img src="images/photo_2021-07-16_12-13-52.jpg" alt="" style="width:100%">
-]
+We can solve Penalized Least Square (PLS) with RKHS.
+
+$$\small\underset{\mathbf{\alpha}}{\text{min}} \left[ (\mathbf{y} - \mathbf{K\alpha})^T(\mathbf{y} - \mathbf{K\alpha}) + \lambda \mathbf{\alpha}^T\mathbf{K\alpha} \right]$$
+
+--
+
+As same as *Ridge*, we can get the solution.
+
+$$\small
+\begin{gathered}
+\hat{\mathbf{\alpha}} = (\mathbf{K} + \lambda \mathbf{I})^{-1} \mathbf{y} \\\\
+\hat{\mathbf{y}} = \mathbf{K}\hat{\alpha} = \mathbf{K}(\mathbf{K} + \lambda \mathbf{I})^{-1} \mathbf{y} = (\mathbf{I} + \lambda \mathbf{K}^{-1})^{-1} \mathbf{y}
+\end{gathered}$$
+
+-----
+
+--
+
+**List of some famous kernels**
+
+* Gaussian RBF : `\(\small K(x, x_m) \equiv K_m(x) = e^{-\nu \lVert x - x_m \rVert^2}\)`
+
+* Thin plate spline : `\(\small K(x, y) = \lVert x - y \rVert^2 \log{(\lVert x - y\rVert)}\)`
+
+* Laplacian kernel : `\(\small K(x, y) = e^{-t \lVert x - y \rVert }\)`
 
 ---
 
@@ -325,7 +425,8 @@ $$\small \hat{f}(x) = \frac{\sum\_{i=1}^N K\_\lambda (x, x\_i) y\_i}{\sum\_{i=1}
 
 * T. Hastie et al., *The Elements of Statistical Learning 2nd ed*, Springer (2009)
 * F. Cucker et al., *Learning Theory: An Approximation Theory Viewpoint*, Cambridge (2007) 
-* D. Sejdinovic et al., *What is an RKHS?*, March 11, 2014
+* S. Theodoridis, *Machine Learning A Bayesian and Optimization Perspective 2nd ed*, Academic Press (2020)
+* D. Sejdinovic et al., *What is an RKHS?*, (2014)
 * F. Luef, *HILBERT SPACES*
 * Febian et al., *Functional Analysis and Infinite-Dimensional Geometry*, Springer (2001)
 

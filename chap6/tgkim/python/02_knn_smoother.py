@@ -2,6 +2,8 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 def main():
+    np.random.seed(42)
+
     N = 200
     k = 30
     x = np.random.rand(N)
@@ -39,13 +41,14 @@ def main():
     plt.scatter(x, y, alpha=0.2, label="Data")
     plt.plot(domain, np.sin(4*domain), alpha=0.8, label="original")
     plt.plot(domain, knn_image, alpha=0.8, label="KNN")
-    plt.plot(domain, eq_image, alpha=0.8, label="Epanechnikov quadratic")
-    plt.plot(domain, tc_image, alpha=0.8, label="Tri-cube")
+    # plt.plot(domain, eq_image, alpha=0.8, label="Epanechnikov quadratic")
+    # plt.plot(domain, tc_image, alpha=0.8, label="Tri-cube")
     
     # Plot with Legends
     plt.legend(fontsize=12)
     plt.grid()
-    plt.savefig('01_knn_smoother.png')
+    plt.savefig('figure/02_knn_only.png')
+    # plt.savefig('figure/02_knn_smoother.png')
 
 def knn(arr, x, k):
     dist = np.fabs(arr - x)
