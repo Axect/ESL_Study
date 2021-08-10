@@ -52,11 +52,8 @@ def main():
 
 def knn(arr, x, k):
     dist = np.fabs(arr - x)
-    idx = [i for i in range(len(dist))]
-    zipped = np.column_stack([idx, dist])
-    sort = zipped[zipped[:,1].argsort()]
-    idx = np.int64(sort[:k, 0])
-    return idx
+    idx = np.argsort(dist)
+    return idx[:k]
 
 def gen_knn_average(data, k):
     def knn_average(x):
@@ -78,6 +75,10 @@ def tri_cube(lam, x0, x):
         return (1-t**3)**3
     else:
         return 0
+
+def gaussian_kernel(lam, x0, x):
+    t = np.fabs(x0 - x) / lam
+    return np.exp(-t**2 / 2)
 
 def gen_nadaraya_watson(data, kernel, lam):
     def nadaraya_watson(x):

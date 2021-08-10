@@ -40,8 +40,8 @@ def main():
     plt.ylabel(r'$y$', fontsize=14)
     
     # Draw Plot ...
-    plt.plot(x, y, 'o', label='Training Data')
-    plt.plot(x, y_m, '-', label='Gaussian Kernel')
+    plt.plot(x, y, 'o', label=r'$y = \sin(x) + \mathcal{N}(0, 0.1)$')
+    plt.plot(x, y_m, '-', label=r'$\hat{y} = K\hat{\alpha}$')
     #plt.plot(x, y_m, '-', label='Laplacian Kernel')
     
     # Plot with Legends
