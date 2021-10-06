@@ -16,12 +16,8 @@ def main():
     val_y = np.sin(4*val_x) + np.random.normal(0, 1/3, N//2)
     val_data = np.column_stack([val_x, val_y])
 
-    # idx = knn(x, 0, 30)
-    # print(idx)
-
     lambdas = np.arange(0.1, 1.0, 0.01)
 
-    domain = np.linspace(0, 1, 100)
     sse = np.zeros(len(lambdas))
     variance = np.zeros(len(lambdas))
 
@@ -29,7 +25,6 @@ def main():
         g = gen_nadaraya_watson(data, epanechnikov_quadratic_kernel, lam)
         g = np.vectorize(g)
         sse[i] = np.mean((y - np.mean(g(x)))**2)
-        # bias[i] = np.mean(np.fabs(np.mean(g(x)) - y))
         variance[i] = np.var(g(x))
     bias = sse - variance
     idx = np.where((np.fabs(variance - bias) == np.min(np.fabs(variance - bias))))[0][0]
@@ -67,7 +62,6 @@ def main():
     # Draw Plot ...
     plt.plot(lambdas, bias, label=r'Bias')
     plt.plot(lambdas, variance, label=r'Variance')
-    # plt.plot(domain, tc_image, alpha=0.8, label="Tri-cube")
     
     # Plot with Legends
     plt.legend(fontsize=12)
@@ -85,7 +79,6 @@ def main():
     plt.plot(val_x, y_ref, label=r'$\lambda=0.1$')
     plt.plot(val_x, y_opt, label=r'$\lambda=%f$' % lam)
     plt.plot(val_x, y_ref2, label=r'$\lambda=0.5$')
-    # plt.plot(domain, tc_image, alpha=0.8, label="Tri-cube")
     
     # Plot with Legends
     plt.legend(fontsize=12)

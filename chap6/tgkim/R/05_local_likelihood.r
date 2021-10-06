@@ -1,10 +1,18 @@
+# ==============================================================================
+# License
+# ==============================================================================
+# This code is based on Notes for Nonparametric Statistics by Eduardo García Portugués
+# The link of code is https://bookdown.org/egarpor/NP-UC3M/kre-ii-loclik.html
+
+# ==============================================================================
+# Source code
+# ==============================================================================
 # Simulate some data
 n <- 200
 logistic <- function(x) 1 / (1 + exp(-x))
 p <- function(x) logistic(1 - 3 * sin(x))
 set.seed(8407)
 X <- runif(n = n, -3, 3)
-#eps <- rnorm(n = n, 0, 1 / 3)
 Y <- rbinom(n = n, size = 1, prob = p(X))
 
 # Set bandwidth and evaluation grid
