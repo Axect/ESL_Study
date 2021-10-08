@@ -1,6 +1,5 @@
 import numpy as np
 import matplotlib.pyplot as plt
-from scipy.stats import gaussian_kde
 
 def main():
     np.random.seed(42)
@@ -109,7 +108,7 @@ def gen_parzen_estimate(x, kernel, lam):
 
 def gen_phi_lam(lam):
     def k(x0, xi):
-        return np.exp(-np.linalg.norm(xi - x0) ** 2 / lam**2) / np.sqrt(2 * np.pi)
+        return np.exp(-np.linalg.norm(xi - x0) ** 2 / (2*lam**2)) / np.sqrt(2 * np.pi)
     return k
 
 def gen_kdc(f_vec, pi_vec):
